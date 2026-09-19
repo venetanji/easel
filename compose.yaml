@@ -1,0 +1,31 @@
+services:
+  easel:
+    build: .
+    image: easel:local
+    restart: unless-stopped
+    environment:
+      # Reachable over tailscale-mesh by container name (docker DNS on that network).
+      COMFY_URL_FLUX: ${COMFY_URL_FLUX:-http://comfy-docker-tailscale-serve-1:8188}
+      EASEL_API_KEY: ${EASEL_API_KEY:-}
+      COMFY_JOB_TIMEOUT: ${COMFY_JOB_TIMEOUT:-600}
+      COMFY_MAX_INFLIGHT: ${COMFY_MAX_INFLIGHT:-1}
+      EASEL_DEFAULT_RESPONSE_FORMAT: ${EASEL_DEFAULT_RESPONSE_FORMAT:-b64_json}
+      EASEL_DEFAULT_STEPS: ${EASEL_DEFAULT_STEPS:-8}
+      EASEL_VARIATION_PROMPT: ${EASEL_VARIATION_PROMPT:-recreate this image, same composition and style}
+    ports:
+      - "${EASEL_PORT:-8799}:8080"
+    healthcheck:
+      test: ["CMD", "/app/.venv/bin/python", "-c",
+             "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - default
+      - tailscale-mesh
+
+networks:
+  default:
+  tailscale-mesh:
+    external: true
