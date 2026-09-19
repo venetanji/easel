@@ -23,6 +23,7 @@ from .errors import APIError, error_response
 from .flux_graph import reference_edit, text_to_image
 
 MAX_N = 4
+MAX_FANOUT = 16  # separator fan-out ceiling (one job, one GPU slot)
 DEFAULT_SIZE = (1024, 1024)
 DEFAULT_MODEL = "flux2-9b"
 
@@ -95,6 +96,9 @@ def plan_prompts(text: str, separator: str, n: int):
     per part, batch_size 1); else the single prompt with batch_size n."""
     parts = [p.strip() for p in text.split(separator)] if separator else [text]
     parts = [p for p in parts if p]
+    if len(parts) > MAX_FANOUT:
+        raise APIError(400, f"too many prompts: {len(parts)} exceeds the fan-out limit "
+                            f"of {MAX_FANOUT}", param="prompt")
     if len(parts) > 1:
         return parts, 1
     return (parts[0] if parts else text), n
@@ -299,6 +303,7 @@ def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
 
     @app.get("/v1/images/view")
     async def view(request: Request, filename: str, subfolder: str = "", type: str = "output"):
+        require_auth(settings, request)
         if type not in ("output", "input", "temp"):
             raise APIError(400, "invalid type", param="type")
         raw = await request.app.state.comfy.fetch(

@@ -137,6 +137,22 @@ def test_edits_separator_prompt_fans_out():
     assert len(fake.uploaded) == 1
 
 
+def test_fanout_capped_at_16():
+    client, _ = build()
+    parts = "|||".join(f"p{i}" for i in range(17))
+    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": parts})
+    assert r.status_code == 400
+    assert r.json()["error"]["param"] == "prompt"
+
+
+def test_fanout_16_ok():
+    client, fake = build()
+    parts = "|||".join(f"p{i}" for i in range(16))
+    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": parts})
+    assert r.status_code == 200
+    assert len(r.json()["data"]) == 16
+
+
 def test_variations_separator_in_server_prompt_fans_out():
     client, fake = build(variation_prompt="front view|||side view|||back view")
     r = client.post("/v1/images/variations",
@@ -332,6 +348,15 @@ def test_view_proxy_returns_image_bytes():
     assert r.status_code == 200
     assert r.content == b"PNG:out_0.png"
     assert r.headers["content-type"].startswith("image/")
+
+
+def test_view_requires_auth_when_key_set():
+    client, _ = build(api_key="secret")
+    r = client.get("/v1/images/view", params={"filename": "out_0.png", "type": "output"})
+    assert r.status_code == 401
+    ok = client.get("/v1/images/view", params={"filename": "out_0.png", "type": "output"},
+                    headers={"Authorization": "Bearer secret"})
+    assert ok.status_code == 200
 
 
 # ---- auth ----
