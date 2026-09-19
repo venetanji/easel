@@ -84,6 +84,25 @@ def test_multiprompt_generation_fans_out(client):
         assert _decode(item["b64_json"]).size == (512, 512)
 
 
+def test_edit_without_size_derives_from_image(client):
+    # No `size` -> size derived from the (non-square) input via GetImageSize.
+    r = client.post("/v1/images/edits",
+                    data={"model": MODEL, "prompt": "add soft morning light", "steps": str(STEPS)},
+                    files={"image": ("wide.png", _red_png((768, 512)), "image/png")})
+    assert r.status_code == 200, r.text
+    w, h = _decode(r.json()["data"][0]["b64_json"]).size
+    assert w % 16 == 0 and h % 16 == 0, (w, h)
+
+
+def test_variation_without_size_derives_from_image(client):
+    r = client.post("/v1/images/variations",
+                    data={"model": MODEL, "steps": str(STEPS)},
+                    files={"image": ("wide.png", _red_png((768, 512)), "image/png")})
+    assert r.status_code == 200, r.text
+    w, h = _decode(r.json()["data"][0]["b64_json"]).size
+    assert w % 16 == 0 and h % 16 == 0, (w, h)
+
+
 def test_image_variation(client):
     r = client.post("/v1/images/variations",
                     data={"model": MODEL, "size": SIZE, "steps": str(STEPS)},
