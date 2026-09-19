@@ -115,6 +115,29 @@ def test_text_to_image_uses_given_clip():
     assert _one(g, "CLIPLoader")["inputs"]["clip_name"] == "my_clip.safetensors"
 
 
+def test_text_to_image_single_prompt_has_no_batcher():
+    g = text_to_image(unet_name="X", prompt="just one", width=512, height=512)
+    assert not _all(g, "SimplePromptBatcher")
+
+
+def test_text_to_image_list_prompt_uses_batcher():
+    g = text_to_image(unet_name="X", prompt=["a red fox", "a blue fox", "a green fox"],
+                      width=512, height=512)
+    batcher = _one(g, "SimplePromptBatcher")
+    lines = [ln for ln in batcher["inputs"]["prompts"].split("\n") if ln]
+    assert lines == ["a red fox", "a blue fox", "a green fox"]
+    # positive encode is fed by the batcher; negative is a zero-out of it
+    pos = _one(g, "CLIPTextEncode")
+    assert pos["inputs"]["text"] == [_key(g, "SimplePromptBatcher"), 0]
+    assert _all(g, "ConditioningZeroOut")
+
+
+def test_text_to_image_singleton_list_is_single_prompt():
+    g = text_to_image(unet_name="X", prompt=["only one"], width=512, height=512)
+    assert not _all(g, "SimplePromptBatcher")
+    assert "only one" in [n["inputs"]["text"] for n in _all(g, "CLIPTextEncode")]
+
+
 def test_text_to_image_has_save_sink_and_valid_graph():
     g = text_to_image(unet_name="X", prompt="p", width=512, height=512)
     assert _all(g, "SaveImage")
@@ -147,6 +170,23 @@ def test_reference_edit_uses_given_clip():
     g = reference_edit(unet_name="X", clip_name="my_clip.safetensors",
                        image_filenames=["a.png"], prompt="p", width=512, height=512)
     assert _one(g, "CLIPLoader")["inputs"]["clip_name"] == "my_clip.safetensors"
+
+
+def test_reference_edit_list_prompt_uses_batcher():
+    g = reference_edit(unet_name="X", image_filenames=["a.png"],
+                       prompt=["turn it red", "make it night"], width=512, height=512)
+    batcher = _one(g, "SimplePromptBatcher")
+    lines = [ln for ln in batcher["inputs"]["prompts"].split("\n") if ln]
+    assert lines == ["turn it red", "make it night"]
+    assert _one(g, "CLIPTextEncode")["inputs"]["text"] == [_key(g, "SimplePromptBatcher"), 0]
+    # still one ReferenceLatent per ref on each branch (refs encoded once)
+    assert len(_all(g, "ReferenceLatent")) == 2
+
+
+def test_reference_edit_single_prompt_has_no_batcher():
+    g = reference_edit(unet_name="X", image_filenames=["a.png"], prompt="just one",
+                       width=512, height=512)
+    assert not _all(g, "SimplePromptBatcher")
 
 
 def test_reference_edit_derives_size_from_first_ref_when_unset():

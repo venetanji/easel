@@ -69,6 +69,7 @@ def test_settings_defaults():
     assert s.default_response_format == "b64_json"
     assert s.default_steps == 8
     assert s.variation_prompt
+    assert s.prompt_separator == "|||"
 
 
 def test_settings_from_env_overrides():
@@ -80,6 +81,7 @@ def test_settings_from_env_overrides():
         "EASEL_DEFAULT_RESPONSE_FORMAT": "url",
         "EASEL_DEFAULT_STEPS": "6",
         "EASEL_VARIATION_PROMPT": "vary it",
+        "EASEL_PROMPT_SEPARATOR": ":::",
     })
     assert s.comfy_url == "http://x:1"
     assert s.api_key == "secret"
@@ -88,6 +90,7 @@ def test_settings_from_env_overrides():
     assert s.default_response_format == "url"
     assert s.default_steps == 6
     assert s.variation_prompt == "vary it"
+    assert s.prompt_separator == ":::"
 
 
 def test_settings_blank_api_key_is_none():

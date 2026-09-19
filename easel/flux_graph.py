@@ -55,6 +55,25 @@ class WorkflowGraph:
         }
 
 
+def _norm_prompts(prompt) -> list[str]:
+    """Accept a single prompt or a list; drop blank entries. Never empty."""
+    if isinstance(prompt, str):
+        return [prompt]
+    parts = [p for p in prompt if p and p.strip()]
+    return parts or [""]
+
+
+def _positive(g, clip, prompt):
+    """Build the positive conditioning. >1 prompt -> SimplePromptBatcher fan-out
+    (one output per line); else a plain CLIPTextEncode."""
+    prompts = _norm_prompts(prompt)
+    if len(prompts) > 1:
+        batcher = g.node("SimplePromptBatcher", prepend="",
+                         prompts="\n".join(prompts) + "\n", append="")
+        return g.node("CLIPTextEncode", text=batcher[0], clip=clip), True
+    return g.node("CLIPTextEncode", text=prompts[0], clip=clip), False
+
+
 def _load_models(g: WorkflowGraph, unet_name: str, clip_name: str):
     unet = g.node("UNETLoader", unet_name=unet_name, weight_dtype="default")
     vae = g.node("VAELoader", vae_name=VAE_NAME)
@@ -80,8 +99,11 @@ def text_to_image(*, unet_name, prompt, width, height, clip_name=CLIP_NAME,
                   filename_prefix="easel_t2i") -> dict:
     g = WorkflowGraph()
     unet, vae, clip = _load_models(g, unet_name, clip_name)
-    pos = g.node("CLIPTextEncode", text=prompt, clip=clip[0])
-    neg = g.node("CLIPTextEncode", text="", clip=clip[0])
+    pos, multi = _positive(g, clip[0], prompt)
+    # For a fan-out batch the negative must be per-item; ConditioningZeroOut mirrors
+    # the list. Single prompt keeps the empty-string negative.
+    neg = g.node("ConditioningZeroOut", conditioning=pos[0]) if multi \
+        else g.node("CLIPTextEncode", text="", clip=clip[0])
     _sampler_tail(g, model=unet[0], positive=pos[0], negative=neg[0], vae=vae[0],
                   width=width, height=height, steps=steps, batch_size=batch_size,
                   seed=seed, filename_prefix=filename_prefix)
@@ -97,7 +119,7 @@ def reference_edit(*, unet_name, image_filenames, prompt, width=None, height=Non
         raise ValueError("image_filenames must contain at least one reference")
     g = WorkflowGraph()
     unet, vae, clip = _load_models(g, unet_name, clip_name)
-    pos = g.node("CLIPTextEncode", text=prompt, clip=clip[0])
+    pos, _multi = _positive(g, clip[0], prompt)
     neg = g.node("ConditioningZeroOut", conditioning=pos[0])
 
     encoded = []

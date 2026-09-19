@@ -20,6 +20,14 @@ def _batch_size(graph):
     return _nodes(graph, "EmptyFlux2LatentImage")[0]["inputs"]["batch_size"]
 
 
+def _output_count(graph):
+    """Mirror comfy: a prompt batcher fans out to one image per line; else batch_size."""
+    batchers = _nodes(graph, "SimplePromptBatcher")
+    if batchers:
+        return len([ln for ln in batchers[0]["inputs"]["prompts"].split("\n") if ln])
+    return _batch_size(graph)
+
+
 class FakeComfy:
     def __init__(self, *, images=None, submit_exc=None, wait_exc=None):
         self.images = images
@@ -44,7 +52,7 @@ class FakeComfy:
             raise self.wait_exc
         if self.images is not None:
             return self.images
-        n = _batch_size(self.submitted_graph)
+        n = _output_count(self.submitted_graph)
         return [{"filename": f"out_{i}.png", "subfolder": "", "type": "output"} for i in range(n)]
 
     async def fetch(self, ref):
@@ -97,6 +105,46 @@ def test_generations_b64_happy_path():
     assert _nodes(fake.submitted_graph, "CLIPLoader")[0]["inputs"]["clip_name"] == "qwen_3_4b_fp4_flux2.safetensors"
     texts = [n["inputs"]["text"] for n in _nodes(fake.submitted_graph, "CLIPTextEncode")]
     assert "a red fox" in texts
+
+
+def test_generations_separator_prompt_fans_out():
+    client, fake = build()
+    r = client.post("/v1/images/generations",
+                    json={"model": "flux2-9b", "prompt": "a red fox|||a blue fox|||a green fox"})
+    assert r.status_code == 200
+    assert len(r.json()["data"]) == 3
+    batcher = _nodes(fake.submitted_graph, "SimplePromptBatcher")[0]
+    assert [ln for ln in batcher["inputs"]["prompts"].split("\n") if ln] == \
+        ["a red fox", "a blue fox", "a green fox"]
+
+
+def test_generations_normal_prompt_no_batcher():
+    client, fake = build()
+    client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "line one\nline two"})
+    # newlines are NOT the separator; a normal multi-line prompt stays a single prompt
+    assert not _nodes(fake.submitted_graph, "SimplePromptBatcher")
+
+
+def test_edits_separator_prompt_fans_out():
+    client, fake = build()
+    r = client.post("/v1/images/edits",
+                    data={"model": "flux2-9b", "prompt": "make it red|||make it night"},
+                    files={"image": ("a.png", b"A", "image/png")})
+    assert r.status_code == 200
+    assert len(r.json()["data"]) == 2
+    assert _nodes(fake.submitted_graph, "SimplePromptBatcher")
+    # reference still encoded once
+    assert len(fake.uploaded) == 1
+
+
+def test_variations_separator_in_server_prompt_fans_out():
+    client, fake = build(variation_prompt="front view|||side view|||back view")
+    r = client.post("/v1/images/variations",
+                    data={"model": "flux2-9b"},
+                    files={"image": ("a.png", b"A", "image/png")})
+    assert r.status_code == 200
+    assert len(r.json()["data"]) == 3
+    assert _nodes(fake.submitted_graph, "SimplePromptBatcher")
 
 
 def test_generations_9b_uses_matching_clip():

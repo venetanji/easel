@@ -82,6 +82,7 @@ class Settings:
     default_response_format: str
     default_steps: int
     variation_prompt: str
+    prompt_separator: str
 
     @classmethod
     def from_env(cls, env: dict | None = None) -> "Settings":
@@ -96,4 +97,5 @@ class Settings:
             variation_prompt=env.get(
                 "EASEL_VARIATION_PROMPT", "recreate this image, same composition and style"
             ),
+            prompt_separator=env.get("EASEL_PROMPT_SEPARATOR", "|||"),
         )

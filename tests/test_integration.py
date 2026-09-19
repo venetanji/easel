@@ -73,6 +73,17 @@ def test_image_edit(client):
     assert img.size == (512, 512)
 
 
+def test_multiprompt_generation_fans_out(client):
+    r = client.post("/v1/images/generations",
+                    json={"model": MODEL, "size": SIZE, "steps": STEPS,
+                          "prompt": "a red apple|||a green pear|||a yellow banana"})
+    assert r.status_code == 200, r.text
+    data = r.json()["data"]
+    assert len(data) == 3
+    for item in data:
+        assert _decode(item["b64_json"]).size == (512, 512)
+
+
 def test_image_variation(client):
     r = client.post("/v1/images/variations",
                     data={"model": MODEL, "size": SIZE, "steps": str(STEPS)},

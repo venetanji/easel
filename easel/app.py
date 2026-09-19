@@ -90,6 +90,16 @@ def resolve_response_format(value, settings: Settings) -> str:
     return rf
 
 
+def plan_prompts(text: str, separator: str, n: int):
+    """Split a prompt on the configured separator. >1 part -> fan-out (one image
+    per part, batch_size 1); else the single prompt with batch_size n."""
+    parts = [p.strip() for p in text.split(separator)] if separator else [text]
+    parts = [p for p in parts if p]
+    if len(parts) > 1:
+        return parts, 1
+    return (parts[0] if parts else text), n
+
+
 def int_opt(value, default):
     if value in (None, ""):
         return default
@@ -228,10 +238,12 @@ def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
         rf = resolve_response_format(body.get("response_format"), settings)
         size = parse_size_or_400(body.get("size"))
         width, height = size or DEFAULT_SIZE
+        prompt_arg, batch = plan_prompts(prompt, settings.prompt_separator, n)
         graph = text_to_image(
-            unet_name=spec.unet, clip_name=spec.clip, prompt=prompt, width=width, height=height,
+            unet_name=spec.unet, clip_name=spec.clip, prompt=prompt_arg,
+            width=width, height=height,
             steps=int_opt(body.get("steps"), settings.default_steps),
-            batch_size=n, seed=int_opt(body.get("seed"), None),
+            batch_size=batch, seed=int_opt(body.get("seed"), None),
         )
         return images_response(await run_job(request, graph, rf))
 
@@ -254,11 +266,12 @@ def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
         size = parse_size_or_400(form_str(form, "size"))
         width, height = size if size else (None, None)
         names = await upload_refs(request.app.state.comfy, images)
+        prompt_arg, batch = plan_prompts(prompt, settings.prompt_separator, n)
         graph = reference_edit(
-            unet_name=spec.unet, clip_name=spec.clip, image_filenames=names, prompt=prompt,
+            unet_name=spec.unet, clip_name=spec.clip, image_filenames=names, prompt=prompt_arg,
             width=width, height=height,
             steps=int_opt(form_str(form, "steps"), settings.default_steps),
-            batch_size=n, seed=int_opt(form_str(form, "seed"), None),
+            batch_size=batch, seed=int_opt(form_str(form, "seed"), None),
         )
         return images_response(await run_job(request, graph, rf))
 
@@ -275,11 +288,12 @@ def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
         size = parse_size_or_400(form_str(form, "size"))
         width, height = size if size else (None, None)
         names = await upload_refs(request.app.state.comfy, images[:1])
+        prompt_arg, batch = plan_prompts(settings.variation_prompt, settings.prompt_separator, n)
         graph = reference_edit(
             unet_name=spec.unet, clip_name=spec.clip, image_filenames=names,
-            prompt=settings.variation_prompt, width=width, height=height,
+            prompt=prompt_arg, width=width, height=height,
             steps=int_opt(form_str(form, "steps"), settings.default_steps),
-            batch_size=n, seed=int_opt(form_str(form, "seed"), None),
+            batch_size=batch, seed=int_opt(form_str(form, "seed"), None),
         )
         return images_response(await run_job(request, graph, rf))
 
