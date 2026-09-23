@@ -1,4 +1,4 @@
-"""FastAPI app: OpenAI-compatible image endpoints backed by ComfyUI Flux.2."""
+"""FastAPI app: OpenAI-compatible image endpoints backed by ComfyUI."""
 from __future__ import annotations
 
 import base64
@@ -18,9 +18,11 @@ from .comfy_client import (
     ComfyTimeout,
     view_query,
 )
-from .config import MODELS, Settings, UnknownModelError, parse_size, resolve_model
+from .config import MODELS, ModelSpec, Settings, UnknownModelError, parse_size, resolve_model
 from .errors import APIError, error_response
 from .flux_graph import reference_edit, text_to_image
+from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
+from .qwen_graph import text_to_image as qwen_text_to_image
 
 MAX_N = 4
 MAX_FANOUT = 16  # separator fan-out ceiling (one job, one GPU slot)
@@ -113,6 +115,11 @@ def int_opt(value, default):
         return default
 
 
+def resolve_steps(value, spec: ModelSpec, settings: Settings) -> int:
+    default = spec.default_steps if spec.default_steps is not None else settings.default_steps
+    return int_opt(value, default)
+
+
 def upload_name(filename: str | None) -> str:
     ext = ".png"
     if filename and "." in filename:
@@ -187,6 +194,32 @@ def images_response(data: list[dict]) -> dict:
     return {"created": int(time.time()), "data": data}
 
 
+def build_generation_graph(spec: ModelSpec, *, prompt, width, height, steps, batch_size, seed):
+    if spec.backend == "qwen_image_2_1":
+        return qwen_text_to_image(
+            unet_name=spec.unet, clip_name=spec.clip, vae_name=spec.vae, prompt=prompt,
+            width=width, height=height, steps=steps, batch_size=batch_size, seed=seed,
+        )
+    return text_to_image(
+        unet_name=spec.unet, clip_name=spec.clip, prompt=prompt, width=width, height=height,
+        steps=steps, batch_size=batch_size, seed=seed,
+    )
+
+
+def build_edit_graph(spec: ModelSpec, *, image_filenames, prompt, width, height, steps,
+                     batch_size, seed):
+    if spec.backend == "qwen_image_2_1":
+        return qwen_reference_edit(
+            unet_name=spec.unet, clip_name=spec.clip, vae_name=spec.vae,
+            image_filenames=image_filenames, prompt=prompt, width=width, height=height,
+            steps=steps, batch_size=batch_size, seed=seed,
+        )
+    return reference_edit(
+        unet_name=spec.unet, clip_name=spec.clip, image_filenames=image_filenames, prompt=prompt,
+        width=width, height=height, steps=steps, batch_size=batch_size, seed=seed,
+    )
+
+
 # ---- app factory ----
 
 def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
@@ -243,10 +276,11 @@ def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
         size = parse_size_or_400(body.get("size"))
         width, height = size or DEFAULT_SIZE
         prompt_arg, batch = plan_prompts(prompt, settings.prompt_separator, n)
-        graph = text_to_image(
-            unet_name=spec.unet, clip_name=spec.clip, prompt=prompt_arg,
+        steps = resolve_steps(body.get("steps"), spec, settings)
+        graph = build_generation_graph(
+            spec, prompt=prompt_arg,
             width=width, height=height,
-            steps=int_opt(body.get("steps"), settings.default_steps),
+            steps=steps,
             batch_size=batch, seed=int_opt(body.get("seed"), None),
         )
         return images_response(await run_job(request, graph, rf))
@@ -265,16 +299,22 @@ def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
         if not prompt:
             raise APIError(400, "prompt is required", param="prompt")
         spec = resolve_spec(form_str(form, "model"))
+        if spec.backend == "qwen_image_2_1" and len(images) > MAX_REFERENCES:
+            raise APIError(
+                400, f"Qwen Image 2.1 supports at most {MAX_REFERENCES} reference images",
+                param="image",
+            )
         n = parse_n(form_str(form, "n"))
         rf = resolve_response_format(form_str(form, "response_format"), settings)
         size = parse_size_or_400(form_str(form, "size"))
         width, height = size if size else (None, None)
         names = await upload_refs(request.app.state.comfy, images)
         prompt_arg, batch = plan_prompts(prompt, settings.prompt_separator, n)
-        graph = reference_edit(
-            unet_name=spec.unet, clip_name=spec.clip, image_filenames=names, prompt=prompt_arg,
+        steps = resolve_steps(form_str(form, "steps"), spec, settings)
+        graph = build_edit_graph(
+            spec, image_filenames=names, prompt=prompt_arg,
             width=width, height=height,
-            steps=int_opt(form_str(form, "steps"), settings.default_steps),
+            steps=steps,
             batch_size=batch, seed=int_opt(form_str(form, "seed"), None),
         )
         return images_response(await run_job(request, graph, rf))
@@ -293,10 +333,10 @@ def create_app(settings: Settings | None = None, comfy=None) -> FastAPI:
         width, height = size if size else (None, None)
         names = await upload_refs(request.app.state.comfy, images[:1])
         prompt_arg, batch = plan_prompts(settings.variation_prompt, settings.prompt_separator, n)
-        graph = reference_edit(
-            unet_name=spec.unet, clip_name=spec.clip, image_filenames=names,
-            prompt=prompt_arg, width=width, height=height,
-            steps=int_opt(form_str(form, "steps"), settings.default_steps),
+        steps = resolve_steps(form_str(form, "steps"), spec, settings)
+        graph = build_edit_graph(
+            spec, image_filenames=names, prompt=prompt_arg, width=width, height=height,
+            steps=steps,
             batch_size=batch, seed=int_opt(form_str(form, "seed"), None),
         )
         return images_response(await run_job(request, graph, rf))

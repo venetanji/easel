@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import time
 
+from .workflow_graph import NodeRef, WorkflowGraph
+
 CLIP_NAME = "qwen_3_8b_fp8mixed.safetensors"
 VAE_NAME = "flux2-vae.safetensors"
 DEFAULT_STEPS = 8
@@ -21,39 +23,6 @@ DEFAULT_STEPS = 8
 
 def _seed(seed):
     return int(seed) if seed is not None else int(time.time() * 1000) % (2 ** 32)
-
-
-class NodeRef:
-    """Handle to an emitted node; `ref[i]` is the ComfyUI link [node_id, output_slot]."""
-
-    __slots__ = ("id",)
-
-    def __init__(self, node_id: str):
-        self.id = node_id
-
-    def __getitem__(self, slot: int):
-        return [self.id, slot]
-
-
-class WorkflowGraph:
-    """Minimal builder for ComfyUI API-format prompt graphs."""
-
-    def __init__(self):
-        self._nodes: dict[str, dict] = {}
-        self._counter = 0
-
-    def node(self, class_type: str, **inputs) -> NodeRef:
-        self._counter += 1
-        node_id = str(self._counter)
-        self._nodes[node_id] = {"class_type": class_type, "inputs": inputs}
-        return NodeRef(node_id)
-
-    def to_dict(self) -> dict:
-        return {
-            nid: {"class_type": n["class_type"], "inputs": dict(n["inputs"])}
-            for nid, n in self._nodes.items()
-        }
-
 
 def _norm_prompts(prompt) -> list[str]:
     """Accept a single prompt or a list; drop blank entries. Never empty."""

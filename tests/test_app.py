@@ -17,7 +17,8 @@ def _nodes(graph, class_type):
 
 
 def _batch_size(graph):
-    return _nodes(graph, "EmptyFlux2LatentImage")[0]["inputs"]["batch_size"]
+    latents = _nodes(graph, "EmptyFlux2LatentImage") or _nodes(graph, "EmptyLatentImage")
+    return latents[0]["inputs"]["batch_size"]
 
 
 def _output_count(graph):
@@ -25,7 +26,11 @@ def _output_count(graph):
     batchers = _nodes(graph, "SimplePromptBatcher")
     if batchers:
         return len([ln for ln in batchers[0]["inputs"]["prompts"].split("\n") if ln])
-    return _batch_size(graph)
+    repeated_latents = _nodes(graph, "RepeatLatentBatch")
+    if repeated_latents:
+        return repeated_latents[0]["inputs"]["amount"]
+    latent_nodes = _nodes(graph, "EmptyFlux2LatentImage") or _nodes(graph, "EmptyLatentImage")
+    return latent_nodes[0]["inputs"]["batch_size"] if latent_nodes else 1
 
 
 class FakeComfy:
@@ -85,7 +90,7 @@ def test_models_list_shape():
     body = r.json()
     assert body["object"] == "list"
     ids = {m["id"] for m in body["data"]}
-    assert ids == {"flux2-9b", "flux2-4b"}
+    assert ids == {"flux2-9b", "flux2-4b", "qwen-image-2.1"}
     for m in body["data"]:
         assert m["object"] == "model" and "created" in m and "owned_by" in m
 
@@ -170,6 +175,46 @@ def test_generations_9b_uses_matching_clip():
     assert _nodes(fake.submitted_graph, "CLIPLoader")[0]["inputs"]["clip_name"] == "qwen_3_8b_fp8mixed.safetensors"
 
 
+def test_generations_qwen_image_21_uses_standard_graph_and_template_defaults():
+    client, fake = build()
+    r = client.post("/v1/images/generations", json={
+        "model": "qwen-image-2.1", "prompt": "a red fox", "size": "768x512", "seed": 42,
+    })
+    assert r.status_code == 200
+    graph = fake.submitted_graph
+    assert _nodes(graph, "UNETLoader")[0]["inputs"]["unet_name"] == \
+        "qwen_image_2.1_int8_convrot.safetensors"
+    assert _nodes(graph, "CLIPLoader")[0]["inputs"] == {
+        "clip_name": "qwen3vl_8b_int8_convrot.safetensors",
+        "type": "qwen_image",
+        "device": "default",
+    }
+    assert _nodes(graph, "VAELoader")[0]["inputs"]["vae_name"] == \
+        "qwen_image_2.1_vae_bf16.safetensors"
+    text = _nodes(graph, "TextEncodeQwenImage21")[0]
+    assert text["inputs"]["prompt"] == "a red fox"
+    assert text["inputs"]["negative_prompt"] == ""
+    sampler = _nodes(graph, "KSampler")[0]["inputs"]
+    assert (sampler["steps"], sampler["cfg"], sampler["sampler_name"],
+            sampler["scheduler"], sampler["seed"]) == (25, 1, "euler", "simple", 42)
+    assert _nodes(graph, "EmptyLatentImage")[0]["inputs"] == {
+        "width": 768, "height": 512, "batch_size": 1,
+    }
+    assert not _nodes(graph, "Flux2Scheduler")
+
+
+def test_generations_qwen_image_21_honors_steps_and_prompt_fanout():
+    client, fake = build()
+    r = client.post("/v1/images/generations", json={
+        "model": "qwen-image-2.1", "prompt": "a fox|||a wolf", "steps": 6,
+    })
+    assert r.status_code == 200
+    assert len(r.json()["data"]) == 2
+    batcher = _nodes(fake.submitted_graph, "SimplePromptBatcher")[0]
+    assert batcher["inputs"]["prompts"] == "a fox\na wolf\n"
+    assert _nodes(fake.submitted_graph, "KSampler")[0]["inputs"]["steps"] == 6
+
+
 def test_generations_url_format():
     client, _ = build()
     r = client.post("/v1/images/generations",
@@ -250,6 +295,59 @@ def test_edits_happy_path_uploads_and_builds_reference_graph():
     assert _nodes(fake.submitted_graph, "ConditioningZeroOut")
     # uploaded server filename is the one wired into LoadImage
     assert _nodes(fake.submitted_graph, "LoadImage")[0]["inputs"]["image"] == "srv_1.png"
+
+
+def test_qwen_image_21_edits_use_encoder_reference_inputs_and_latent():
+    client, fake = build()
+    r = client.post("/v1/images/edits",
+                    data={"model": "qwen-image-2.1", "prompt": "combine them"},
+                    files=[("image[]", ("a.png", b"A", "image/png")),
+                           ("image[]", ("b.png", b"B", "image/png"))])
+    assert r.status_code == 200
+    graph = fake.submitted_graph
+    encoder = _nodes(graph, "TextEncodeQwenImage21")[0]
+    load_ids = [key for key, node in graph.items() if node["class_type"] == "LoadImage"]
+    assert encoder["inputs"]["images.image_1"] == [load_ids[0], 0]
+    assert encoder["inputs"]["images.image_2"] == [load_ids[1], 0]
+    assert encoder["inputs"]["resolution"] == 1024
+    assert len(_nodes(graph, "LoadImage")) == 2
+    encoder_id = next(k for k, v in graph.items() if v["class_type"] == "TextEncodeQwenImage21")
+    sampler = _nodes(graph, "KSampler")[0]["inputs"]
+    assert sampler["latent_image"] == [encoder_id, 2]
+    assert sampler["model"][0] == next(
+        k for k, v in graph.items() if v["class_type"] == "QwenImage21Cache"
+    )
+    assert len(fake.uploaded) == 2
+
+
+def test_qwen_image_21_variations_use_reference_encoder():
+    client, fake = build(variation_prompt="front view")
+    r = client.post("/v1/images/variations", data={"model": "qwen-image-2.1"},
+                    files={"image": ("a.png", b"A", "image/png")})
+    assert r.status_code == 200
+    assert _nodes(fake.submitted_graph, "TextEncodeQwenImage21")
+    assert _nodes(fake.submitted_graph, "LoadImage")
+
+
+def test_qwen_image_21_edits_reject_more_than_16_reference_images():
+    client, fake = build()
+    r = client.post("/v1/images/edits",
+                    data={"model": "qwen-image-2.1", "prompt": "combine them"},
+                    files=[("image[]", (f"{i}.png", b"A", "image/png")) for i in range(17)])
+    assert r.status_code == 400
+    assert r.json()["error"]["param"] == "image"
+    assert fake.uploaded == []
+
+
+def test_qwen_image_21_edit_n_repeats_encoded_latent():
+    client, fake = build()
+    r = client.post("/v1/images/edits", data={
+        "model": "qwen-image-2.1", "prompt": "make it brighter", "n": "3",
+    }, files={"image": ("a.png", b"A", "image/png")})
+    assert r.status_code == 200
+    assert len(r.json()["data"]) == 3
+    repeated = _nodes(fake.submitted_graph, "RepeatLatentBatch")
+    assert len(repeated) == 1 and repeated[0]["inputs"]["amount"] == 3
 
 
 def test_edits_multiple_reference_images():

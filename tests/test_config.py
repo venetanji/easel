@@ -14,10 +14,16 @@ def test_resolve_known_models():
     assert four.unet == "flux-2-klein-4b-fp8.safetensors"
     # klein-4b needs the 4b text encoder (7680-dim), not the 8b one
     assert four.clip == "qwen_3_4b_fp4_flux2.safetensors"
+    qwen = resolve_model("qwen-image-2.1")
+    assert qwen.unet == "qwen_image_2.1_int8_convrot.safetensors"
+    assert qwen.clip == "qwen3vl_8b_int8_convrot.safetensors"
+    assert qwen.vae == "qwen_image_2.1_vae_bf16.safetensors"
+    assert qwen.backend == "qwen_image_2_1"
+    assert qwen.default_steps == 25
 
 
 def test_model_table_ids():
-    assert set(MODELS) == {"flux2-9b", "flux2-4b"}
+    assert set(MODELS) == {"flux2-9b", "flux2-4b", "qwen-image-2.1"}
 
 
 def test_resolve_unknown_model_raises():

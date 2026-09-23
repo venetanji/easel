@@ -3,19 +3,30 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from typing import Literal
 
 @dataclass(frozen=True)
 class ModelSpec:
     unet: str
     clip: str
+    backend: Literal["flux2", "qwen_image_2_1"] = "flux2"
+    vae: str | None = None
+    default_steps: int | None = None
 
 
-# OpenAI model id -> ComfyUI files. Only place model names are defined.
+# OpenAI model id -> ComfyUI files and graph settings. Only place model names are defined.
 # Each klein UNET needs its matching qwen text encoder (dims differ):
 #   9b -> qwen-3-8b (12288-dim), 4b -> qwen-3-4b (7680-dim).
 MODELS = {
     "flux2-9b": ModelSpec("flux-2-klein-9b-fp8.safetensors", "qwen_3_8b_fp8mixed.safetensors"),
     "flux2-4b": ModelSpec("flux-2-klein-4b-fp8.safetensors", "qwen_3_4b_fp4_flux2.safetensors"),
+    "qwen-image-2.1": ModelSpec(
+        "qwen_image_2.1_int8_convrot.safetensors",
+        "qwen3vl_8b_int8_convrot.safetensors",
+        backend="qwen_image_2_1",
+        vae="qwen_image_2.1_vae_bf16.safetensors",
+        default_steps=25,
+    ),
 }
 
 # Flux.2 latent constraints.
