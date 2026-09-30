@@ -87,6 +87,7 @@ def _clean(value: str | None) -> str | None:
 @dataclass(frozen=True)
 class Settings:
     comfy_url: str
+    comfy_video_url: str | None
     api_key: str | None
     job_timeout: float
     max_inflight: int
@@ -100,6 +101,7 @@ class Settings:
         env = os.environ if env is None else env
         return cls(
             comfy_url=env.get("COMFY_URL_FLUX", "http://comfy-docker-tailscale-serve-1:8188"),
+            comfy_video_url=_clean(env.get("COMFY_URL_VIDEO")),
             api_key=_clean(env.get("EASEL_API_KEY")),
             job_timeout=float(env.get("COMFY_JOB_TIMEOUT", "600")),
             max_inflight=int(env.get("COMFY_MAX_INFLIGHT", "1")),

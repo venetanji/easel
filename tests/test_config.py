@@ -69,6 +69,7 @@ def test_parse_size_malformed_raises(bad):
 def test_settings_defaults():
     s = Settings.from_env({})
     assert s.comfy_url.startswith("http")
+    assert s.comfy_video_url is None
     assert s.api_key is None
     assert s.job_timeout == 600
     assert s.max_inflight == 1
@@ -81,6 +82,7 @@ def test_settings_defaults():
 def test_settings_from_env_overrides():
     s = Settings.from_env({
         "COMFY_URL_FLUX": "http://x:1",
+        "COMFY_URL_VIDEO": "http://video:2",
         "EASEL_API_KEY": "secret",
         "COMFY_JOB_TIMEOUT": "120",
         "COMFY_MAX_INFLIGHT": "2",
@@ -90,6 +92,7 @@ def test_settings_from_env_overrides():
         "EASEL_PROMPT_SEPARATOR": ":::",
     })
     assert s.comfy_url == "http://x:1"
+    assert s.comfy_video_url == "http://video:2"
     assert s.api_key == "secret"
     assert s.job_timeout == 120
     assert s.max_inflight == 2

@@ -64,12 +64,13 @@ class ComfyClient:
         self._http = http
         self.client_id = client_id or str(uuid.uuid4())
 
-    async def upload_image(self, data: bytes, filename: str) -> tuple[str, str]:
+    async def upload_image(self, data: bytes, filename: str,
+                           content_type: str = "image/png") -> tuple[str, str]:
         """Upload reference bytes to ComfyUI's input dir. Returns the server's
         (name, subfolder) — comfy may rename on collision, so never assume ours."""
         resp = await self._http.post(
             f"{self._base}/upload/image",
-            files={"image": (filename, data, "image/png")},
+            files={"image": (filename, data, content_type)},
             data={"overwrite": "true", "type": "input"},
         )
         resp.raise_for_status()
@@ -90,7 +91,8 @@ class ComfyClient:
             raise ComfyError(f"comfy /prompt {resp.status_code}: {resp.text[:500]}")
         raise ComfySubmitError(body.get("node_errors"), body.get("error"))
 
-    async def wait(self, prompt_id: str, timeout: float, poll_interval: float = 0.5) -> list[ImageRef]:
+    async def wait(self, prompt_id: str, timeout: float, poll_interval: float = 0.5,
+                   output_kind: str = "images") -> list[ImageRef]:
         deadline = time.monotonic() + timeout
         while True:
             resp = await self._http.get(f"{self._base}/history/{prompt_id}")
@@ -102,10 +104,23 @@ class ComfyClient:
                     node_type, msg = self._extract_error(status)
                     raise ComfyExecError(prompt_id, msg, node_type)
                 if status.get("completed") or status.get("status_str") == "success" or entry.get("outputs"):
-                    return self._collect_images(entry.get("outputs") or {})
+                    outputs = entry.get("outputs") or {}
+                    if output_kind == "videos":
+                        return self._collect_videos(outputs)
+                    return self._collect_images(outputs)
             if time.monotonic() >= deadline:
                 raise ComfyTimeout(prompt_id)
             await asyncio.sleep(poll_interval)
+
+    async def history_item(self, prompt_id: str) -> dict | None:
+        resp = await self._http.get(f"{self._base}/history/{prompt_id}")
+        resp.raise_for_status()
+        return resp.json().get(prompt_id)
+
+    async def queue(self) -> dict:
+        resp = await self._http.get(f"{self._base}/queue")
+        resp.raise_for_status()
+        return resp.json()
 
     async def fetch(self, ref: ImageRef) -> bytes:
         resp = await self._http.get(f"{self._base}/view", params={
@@ -123,9 +138,29 @@ class ComfyClient:
 
     @staticmethod
     def _collect_images(outputs: dict) -> list[ImageRef]:
+        return ComfyClient._collect_media(outputs, "images")
+
+    @staticmethod
+    def _collect_videos(outputs: dict) -> list[ImageRef]:
+        refs = ComfyClient._collect_media(outputs, "videos")
+        if refs:
+            return refs
+        refs = ComfyClient._collect_media(outputs, "gifs")
+        if refs:
+            return refs
+        # ComfyUI's native SaveVideo node serializes PreviewVideo results as
+        # animated image entries in its history response.
+        refs = []
+        for node_out in outputs.values():
+            if node_out.get("animated"):
+                refs.extend(ComfyClient._collect_media({"node": node_out}, "images"))
+        return refs
+
+    @staticmethod
+    def _collect_media(outputs: dict, key: str) -> list[ImageRef]:
         refs: list[ImageRef] = []
         for node_out in outputs.values():
-            for img in node_out.get("images", []):
+            for img in node_out.get(key, []):
                 refs.append({
                     "filename": img["filename"],
                     "subfolder": img.get("subfolder", ""),

@@ -40,6 +40,7 @@ class FakeComfy:
         self.wait_exc = wait_exc
         self.submitted_graph = None
         self.uploaded = []
+        self.fetched = []
         self.prompt_id = "fake-pid"
 
     async def upload_image(self, data, filename):
@@ -61,6 +62,7 @@ class FakeComfy:
         return [{"filename": f"out_{i}.png", "subfolder": "", "type": "output"} for i in range(n)]
 
     async def fetch(self, ref):
+        self.fetched.append(ref)
         return b"PNG:" + ref["filename"].encode()
 
 
@@ -68,9 +70,9 @@ def settings(**over):
     return dataclasses.replace(Settings.from_env({}), **over)
 
 
-def build(fake=None, **over):
+def build(fake=None, video=None, **over):
     fake = fake or FakeComfy()
-    app = create_app(settings=settings(**over), comfy=fake)
+    app = create_app(settings=settings(**over), comfy=fake, comfy_video=video)
     return TestClient(app), fake
 
 
@@ -110,6 +112,36 @@ def test_generations_b64_happy_path():
     assert _nodes(fake.submitted_graph, "CLIPLoader")[0]["inputs"]["clip_name"] == "qwen_3_4b_fp4_flux2.safetensors"
     texts = [n["inputs"]["text"] for n in _nodes(fake.submitted_graph, "CLIPTextEncode")]
     assert "a red fox" in texts
+
+
+def test_generations_can_target_video_server_independently():
+    video = FakeComfy()
+    client, image = build(video=video, comfy_video_url="http://video", max_inflight=1)
+    assert client.app.state.inflight.acquire()
+    try:
+        r = client.post("/v1/images/generations", json={
+            "model": "flux2-4b", "prompt": "a red fox", "server": "video",
+        })
+        assert r.status_code == 200
+        assert video.submitted_graph is not None
+        assert image.submitted_graph is None
+        assert client.post("/v1/images/generations", json={"prompt": "p"}).status_code == 429
+    finally:
+        client.app.state.inflight.release()
+
+
+def test_video_server_requires_configuration():
+    client, _ = build()
+    r = client.post("/v1/images/generations", json={"prompt": "p", "server": "video"})
+    assert r.status_code == 400
+    assert r.json()["error"]["param"] == "server"
+
+
+def test_unknown_server_is_rejected():
+    client, _ = build(comfy_video_url="http://video")
+    r = client.post("/v1/images/generations", json={"prompt": "p", "server": "other"})
+    assert r.status_code == 400
+    assert r.json()["error"]["param"] == "server"
 
 
 def test_generations_separator_prompt_fans_out():
@@ -224,6 +256,20 @@ def test_generations_url_format():
     assert "/v1/images/view" in url and "filename=out_0.png" in url
 
 
+def test_video_url_fetches_from_video_server():
+    video = FakeComfy()
+    client, image = build(video=video, comfy_video_url="http://video")
+    r = client.post("/v1/images/generations", json={
+        "prompt": "p", "server": "video", "response_format": "url",
+    })
+    assert r.status_code == 200
+    url = r.json()["data"][0]["url"]
+    assert "server=video" in url
+    assert client.get(url).status_code == 200
+    assert len(video.fetched) == 1
+    assert image.fetched == []
+
+
 def test_generations_n_maps_to_batch_size():
     client, fake = build()
     r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p", "n": 3})
@@ -295,6 +341,18 @@ def test_edits_happy_path_uploads_and_builds_reference_graph():
     assert _nodes(fake.submitted_graph, "ConditioningZeroOut")
     # uploaded server filename is the one wired into LoadImage
     assert _nodes(fake.submitted_graph, "LoadImage")[0]["inputs"]["image"] == "srv_1.png"
+
+
+def test_edits_upload_references_to_selected_video_server():
+    video = FakeComfy()
+    client, image = build(video=video, comfy_video_url="http://video")
+    r = client.post("/v1/images/edits",
+                    data={"model": "flux2-4b", "prompt": "make it snowy", "server": "video"},
+                    files={"image": ("photo.png", b"IMGDATA", "image/png")})
+    assert r.status_code == 200
+    assert len(video.uploaded) == 1
+    assert image.uploaded == []
+    assert video.submitted_graph is not None
 
 
 def test_qwen_image_21_edits_use_encoder_reference_inputs_and_latent():

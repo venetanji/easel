@@ -6,6 +6,7 @@ services:
     environment:
       # Reachable over tailscale-mesh by container name (docker DNS on that network).
       COMFY_URL_FLUX: ${COMFY_URL_FLUX:-http://comfy-docker-tailscale-serve-1:8188}
+      COMFY_URL_VIDEO: ${COMFY_URL_VIDEO:-http://comfy-docker-tailscale-serve-video-1:8188}
       EASEL_API_KEY: ${EASEL_API_KEY:-}
       COMFY_JOB_TIMEOUT: ${COMFY_JOB_TIMEOUT:-600}
       COMFY_MAX_INFLIGHT: ${COMFY_MAX_INFLIGHT:-1}
