@@ -17,6 +17,9 @@ def _nodes(graph, class_type):
 
 
 def _batch_size(graph):
+    repeated = _nodes(graph, "RepeatLatentBatch")
+    if repeated:
+        return repeated[0]["inputs"]["amount"]
     latents = _nodes(graph, "EmptyFlux2LatentImage") or _nodes(graph, "EmptyLatentImage")
     return latents[0]["inputs"]["batch_size"]
 
@@ -65,6 +68,9 @@ class FakeComfy:
         self.fetched.append(ref)
         return b"PNG:" + ref["filename"].encode()
 
+    async def queue(self):
+        return {"queue_running": [], "queue_pending": []}
+
 
 def settings(**over):
     return dataclasses.replace(Settings.from_env({}), **over)
@@ -92,7 +98,7 @@ def test_models_list_shape():
     body = r.json()
     assert body["object"] == "list"
     ids = {m["id"] for m in body["data"]}
-    assert ids == {"flux2-9b", "flux2-4b", "qwen-image-2.1"}
+    assert ids == {"qwen-image-2.1"}
     for m in body["data"]:
         assert m["object"] == "model" and "created" in m and "owned_by" in m
 
@@ -101,17 +107,18 @@ def test_models_list_shape():
 
 def test_generations_b64_happy_path():
     client, fake = build()
-    r = client.post("/v1/images/generations", json={"model": "flux2-4b", "prompt": "a red fox"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "a red fox"})
     assert r.status_code == 200
     body = r.json()
     assert "created" in body and len(body["data"]) == 1
     raw = base64.b64decode(body["data"][0]["b64_json"])
     assert raw.startswith(b"PNG:")
     # correct UNET + matching CLIP + prompt wired into the graph
-    assert _nodes(fake.submitted_graph, "UNETLoader")[0]["inputs"]["unet_name"] == "flux-2-klein-4b-fp8.safetensors"
-    assert _nodes(fake.submitted_graph, "CLIPLoader")[0]["inputs"]["clip_name"] == "qwen_3_4b_fp4_flux2.safetensors"
-    texts = [n["inputs"]["text"] for n in _nodes(fake.submitted_graph, "CLIPTextEncode")]
-    assert "a red fox" in texts
+    assert _nodes(fake.submitted_graph, "UNETLoader")[0]["inputs"]["unet_name"] == \
+        "qwen_image_2.1_int8_convrot.safetensors"
+    assert _nodes(fake.submitted_graph, "CLIPLoader")[0]["inputs"]["clip_name"] == \
+        "qwen3vl_8b_int8_convrot.safetensors"
+    assert _nodes(fake.submitted_graph, "TextEncodeQwenImage21")[0]["inputs"]["prompt"] == "a red fox"
 
 
 def test_generations_can_target_video_server_independently():
@@ -120,7 +127,7 @@ def test_generations_can_target_video_server_independently():
     assert client.app.state.inflight.acquire()
     try:
         r = client.post("/v1/images/generations", json={
-            "model": "flux2-4b", "prompt": "a red fox", "server": "video",
+            "model": "qwen-image-2.1", "prompt": "a red fox", "server": "video",
         })
         assert r.status_code == 200
         assert video.submitted_graph is not None
@@ -147,7 +154,7 @@ def test_unknown_server_is_rejected():
 def test_generations_separator_prompt_fans_out():
     client, fake = build()
     r = client.post("/v1/images/generations",
-                    json={"model": "flux2-9b", "prompt": "a red fox|||a blue fox|||a green fox"})
+                    json={"model": "qwen-image-2.1", "prompt": "a red fox|||a blue fox|||a green fox"})
     assert r.status_code == 200
     assert len(r.json()["data"]) == 3
     batcher = _nodes(fake.submitted_graph, "SimplePromptBatcher")[0]
@@ -157,7 +164,7 @@ def test_generations_separator_prompt_fans_out():
 
 def test_generations_normal_prompt_no_batcher():
     client, fake = build()
-    client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "line one\nline two"})
+    client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "line one\nline two"})
     # newlines are NOT the separator; a normal multi-line prompt stays a single prompt
     assert not _nodes(fake.submitted_graph, "SimplePromptBatcher")
 
@@ -165,7 +172,7 @@ def test_generations_normal_prompt_no_batcher():
 def test_edits_separator_prompt_fans_out():
     client, fake = build()
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-9b", "prompt": "make it red|||make it night"},
+                    data={"model": "qwen-image-2.1", "prompt": "make it red|||make it night"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 200
     assert len(r.json()["data"]) == 2
@@ -177,7 +184,7 @@ def test_edits_separator_prompt_fans_out():
 def test_fanout_capped_at_16():
     client, _ = build()
     parts = "|||".join(f"p{i}" for i in range(17))
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": parts})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": parts})
     assert r.status_code == 400
     assert r.json()["error"]["param"] == "prompt"
 
@@ -185,7 +192,7 @@ def test_fanout_capped_at_16():
 def test_fanout_16_ok():
     client, fake = build()
     parts = "|||".join(f"p{i}" for i in range(16))
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": parts})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": parts})
     assert r.status_code == 200
     assert len(r.json()["data"]) == 16
 
@@ -193,18 +200,20 @@ def test_fanout_16_ok():
 def test_variations_separator_in_server_prompt_fans_out():
     client, fake = build(variation_prompt="front view|||side view|||back view")
     r = client.post("/v1/images/variations",
-                    data={"model": "flux2-9b"},
+                    data={"model": "qwen-image-2.1"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 200
     assert len(r.json()["data"]) == 3
     assert _nodes(fake.submitted_graph, "SimplePromptBatcher")
 
 
-def test_generations_9b_uses_matching_clip():
-    client, fake = build()
-    client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p"})
-    assert _nodes(fake.submitted_graph, "UNETLoader")[0]["inputs"]["unet_name"] == "flux-2-klein-9b-fp8.safetensors"
-    assert _nodes(fake.submitted_graph, "CLIPLoader")[0]["inputs"]["clip_name"] == "qwen_3_8b_fp8mixed.safetensors"
+def test_generations_default_to_qwen_and_ignore_legacy_global_step_default():
+    client, fake = build(default_steps=8)
+    response = client.post("/v1/images/generations", json={"prompt": "p"})
+    assert response.status_code == 200
+    assert _nodes(fake.submitted_graph, "KSampler")[0]["inputs"]["steps"] == 25
+    assert _nodes(fake.submitted_graph, "UNETLoader")[0]["inputs"]["unet_name"] == \
+        "qwen_image_2.1_int8_convrot.safetensors"
 
 
 def test_generations_qwen_image_21_uses_standard_graph_and_template_defaults():
@@ -250,7 +259,7 @@ def test_generations_qwen_image_21_honors_steps_and_prompt_fanout():
 def test_generations_url_format():
     client, _ = build()
     r = client.post("/v1/images/generations",
-                    json={"model": "flux2-9b", "prompt": "p", "response_format": "url"})
+                    json={"model": "qwen-image-2.1", "prompt": "p", "response_format": "url"})
     assert r.status_code == 200
     url = r.json()["data"][0]["url"]
     assert "/v1/images/view" in url and "filename=out_0.png" in url
@@ -272,7 +281,7 @@ def test_video_url_fetches_from_video_server():
 
 def test_generations_n_maps_to_batch_size():
     client, fake = build()
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p", "n": 3})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p", "n": 3})
     assert r.status_code == 200
     assert len(r.json()["data"]) == 3
     assert _batch_size(fake.submitted_graph) == 3
@@ -281,9 +290,9 @@ def test_generations_n_maps_to_batch_size():
 def test_generations_size_parsed_into_dimensions():
     client, fake = build()
     r = client.post("/v1/images/generations",
-                    json={"model": "flux2-9b", "prompt": "p", "size": "512x768"})
+                    json={"model": "qwen-image-2.1", "prompt": "p", "size": "512x768"})
     assert r.status_code == 200
-    latent = _nodes(fake.submitted_graph, "EmptyFlux2LatentImage")[0]
+    latent = _nodes(fake.submitted_graph, "EmptyLatentImage")[0]
     assert (latent["inputs"]["width"], latent["inputs"]["height"]) == (512, 768)
 
 
@@ -299,14 +308,14 @@ def test_generations_unknown_model_400():
 
 def test_generations_missing_prompt_400():
     client, _ = build()
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1"})
     assert r.status_code == 400
     assert r.json()["error"]["param"] == "prompt"
 
 
 def test_generations_bad_size_400():
     client, _ = build()
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p", "size": "banana"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p", "size": "banana"})
     assert r.status_code == 400
     assert r.json()["error"]["param"] == "size"
 
@@ -314,7 +323,7 @@ def test_generations_bad_size_400():
 def test_generations_ignores_unknown_sdk_fields():
     client, _ = build()
     r = client.post("/v1/images/generations", json={
-        "model": "flux2-9b", "prompt": "p",
+        "model": "qwen-image-2.1", "prompt": "p",
         "user": "u1", "quality": "hd", "style": "vivid", "background": "opaque",
     })
     assert r.status_code == 200
@@ -322,7 +331,7 @@ def test_generations_ignores_unknown_sdk_fields():
 
 def test_generations_bad_n_400():
     client, _ = build()
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p", "n": 99})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p", "n": 99})
     assert r.status_code == 400
     assert r.json()["error"]["param"] == "n"
 
@@ -332,13 +341,13 @@ def test_generations_bad_n_400():
 def test_edits_happy_path_uploads_and_builds_reference_graph():
     client, fake = build()
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-9b", "prompt": "make it snowy"},
+                    data={"model": "qwen-image-2.1", "prompt": "make it snowy"},
                     files={"image": ("photo.png", b"IMGDATA", "image/png")})
     assert r.status_code == 200
     assert len(fake.uploaded) == 1 and fake.uploaded[0][0] == b"IMGDATA"
-    # reference-edit graph: exactly one CLIPTextEncode + ConditioningZeroOut + ReferenceLatent
-    assert len(_nodes(fake.submitted_graph, "ReferenceLatent")) == 2  # 1 ref x pos+neg
-    assert _nodes(fake.submitted_graph, "ConditioningZeroOut")
+    encoder = _nodes(fake.submitted_graph, "TextEncodeQwenImage21")[0]
+    assert "images.image_1" in encoder["inputs"]
+    assert _nodes(fake.submitted_graph, "QwenImage21Cache")
     # uploaded server filename is the one wired into LoadImage
     assert _nodes(fake.submitted_graph, "LoadImage")[0]["inputs"]["image"] == "srv_1.png"
 
@@ -347,7 +356,7 @@ def test_edits_upload_references_to_selected_video_server():
     video = FakeComfy()
     client, image = build(video=video, comfy_video_url="http://video")
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-4b", "prompt": "make it snowy", "server": "video"},
+                    data={"model": "qwen-image-2.1", "prompt": "make it snowy", "server": "video"},
                     files={"image": ("photo.png", b"IMGDATA", "image/png")})
     assert r.status_code == 200
     assert len(video.uploaded) == 1
@@ -411,18 +420,20 @@ def test_qwen_image_21_edit_n_repeats_encoded_latent():
 def test_edits_multiple_reference_images():
     client, fake = build()
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-9b", "prompt": "combine them"},
+                    data={"model": "qwen-image-2.1", "prompt": "combine them"},
                     files=[("image[]", ("a.png", b"A", "image/png")),
                            ("image[]", ("b.png", b"B", "image/png"))])
     assert r.status_code == 200
     assert len(fake.uploaded) == 2
-    assert len(_nodes(fake.submitted_graph, "ReferenceLatent")) == 4  # 2 refs x pos+neg
+    encoder = _nodes(fake.submitted_graph, "TextEncodeQwenImage21")[0]
+    assert "images.image_1" in encoder["inputs"]
+    assert "images.image_2" in encoder["inputs"]
 
 
 def test_edits_mask_rejected_400():
     client, _ = build()
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-9b", "prompt": "p"},
+                    data={"model": "qwen-image-2.1", "prompt": "p"},
                     files=[("image", ("a.png", b"A", "image/png")),
                            ("mask", ("m.png", b"M", "image/png"))])
     assert r.status_code == 400
@@ -432,7 +443,7 @@ def test_edits_mask_rejected_400():
 
 def test_edits_missing_image_400():
     client, _ = build()
-    r = client.post("/v1/images/edits", data={"model": "flux2-9b", "prompt": "p"})
+    r = client.post("/v1/images/edits", data={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 400
     assert r.json()["error"]["param"] == "image"
 
@@ -440,7 +451,7 @@ def test_edits_missing_image_400():
 def test_edits_missing_prompt_400():
     client, _ = build()
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-9b"},
+                    data={"model": "qwen-image-2.1"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 400
     assert r.json()["error"]["param"] == "prompt"
@@ -449,21 +460,25 @@ def test_edits_missing_prompt_400():
 def test_edits_explicit_size_overrides_derivation():
     client, fake = build()
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-9b", "prompt": "p", "size": "512x512"},
+                    data={"model": "qwen-image-2.1", "prompt": "p", "size": "512x512"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 200
-    latent = _nodes(fake.submitted_graph, "EmptyFlux2LatentImage")[0]
-    assert (latent["inputs"]["width"], latent["inputs"]["height"]) == (512, 512)
+    encoder = _nodes(fake.submitted_graph, "TextEncodeQwenImage21")[0]
+    assert encoder["inputs"]["resolution"] == 512
     assert not _nodes(fake.submitted_graph, "GetImageSize")
 
 
 def test_edits_default_size_derives_from_image():
     client, fake = build()
     r = client.post("/v1/images/edits",
-                    data={"model": "flux2-9b", "prompt": "p"},
+                    data={"model": "qwen-image-2.1", "prompt": "p"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 200
-    assert _nodes(fake.submitted_graph, "GetImageSize")
+    encoder = _nodes(fake.submitted_graph, "TextEncodeQwenImage21")[0]
+    assert encoder["inputs"]["resolution"] == 1024
+    encoder_id = next(key for key, node in fake.submitted_graph.items()
+                      if node["class_type"] == "TextEncodeQwenImage21")
+    assert _nodes(fake.submitted_graph, "KSampler")[0]["inputs"]["latent_image"] == [encoder_id, 2]
 
 
 # ---- variations ----
@@ -471,18 +486,20 @@ def test_edits_default_size_derives_from_image():
 def test_variations_injects_default_prompt_single_ref():
     client, fake = build(variation_prompt="vary this")
     r = client.post("/v1/images/variations",
-                    data={"model": "flux2-9b"},
+                    data={"model": "qwen-image-2.1"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 200
     assert len(fake.uploaded) == 1
     # single-ref reference edit using the configured variation prompt
-    assert len(_nodes(fake.submitted_graph, "ReferenceLatent")) == 2
-    assert _nodes(fake.submitted_graph, "CLIPTextEncode")[0]["inputs"]["text"] == "vary this"
+    encoder = _nodes(fake.submitted_graph, "TextEncodeQwenImage21")[0]
+    assert encoder["inputs"]["prompt"] == "vary this"
+    assert "images.image_1" in encoder["inputs"]
+    assert "images.image_2" not in encoder["inputs"]
 
 
 def test_variations_missing_image_400():
     client, _ = build()
-    r = client.post("/v1/images/variations", data={"model": "flux2-9b"})
+    r = client.post("/v1/images/variations", data={"model": "qwen-image-2.1"})
     assert r.status_code == 400
     assert r.json()["error"]["param"] == "image"
 
@@ -490,7 +507,7 @@ def test_variations_missing_image_400():
 def test_variations_n_maps_to_batch_size():
     client, fake = build()
     r = client.post("/v1/images/variations",
-                    data={"model": "flux2-9b", "n": "2"},
+                    data={"model": "qwen-image-2.1", "n": "2"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 200
     assert _batch_size(fake.submitted_graph) == 2
@@ -519,7 +536,7 @@ def test_view_requires_auth_when_key_set():
 
 def test_auth_required_when_key_set():
     client, _ = build(api_key="secret")
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 401
     assert r.json()["error"]["code"] == "invalid_api_key"
 
@@ -528,7 +545,7 @@ def test_auth_accepts_correct_bearer():
     client, _ = build(api_key="secret")
     r = client.post("/v1/images/generations",
                     headers={"Authorization": "Bearer secret"},
-                    json={"model": "flux2-9b", "prompt": "p"})
+                    json={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 200
 
 
@@ -536,7 +553,7 @@ def test_auth_rejects_wrong_bearer():
     client, _ = build(api_key="secret")
     r = client.post("/v1/images/generations",
                     headers={"Authorization": "Bearer nope"},
-                    json={"model": "flux2-9b", "prompt": "p"})
+                    json={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 401
 
 
@@ -546,7 +563,7 @@ def test_busy_returns_429_with_retry_after():
     client, _ = build(max_inflight=1)
     # occupy the only slot
     assert client.app.state.inflight.acquire() is True
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 429
     assert "retry-after" in {k.lower() for k in r.headers}
     assert r.json()["error"]["type"] == "rate_limit_error"
@@ -555,7 +572,7 @@ def test_busy_returns_429_with_retry_after():
 def test_submit_error_maps_to_502_with_node_errors():
     fake = FakeComfy(submit_exc=ComfySubmitError({"3": {"errors": [{"message": "bad"}]}}))
     client, _ = build(fake)
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 502
     assert "node_errors" in r.json()["error"]["message"]
 
@@ -563,7 +580,7 @@ def test_submit_error_maps_to_502_with_node_errors():
 def test_exec_error_maps_to_502():
     fake = FakeComfy(wait_exc=ComfyExecError("pid-1", "CUDA OOM", "KSampler"))
     client, _ = build(fake)
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 502
     assert "CUDA OOM" in r.json()["error"]["message"]
 
@@ -571,13 +588,13 @@ def test_exec_error_maps_to_502():
 def test_timeout_maps_to_504_with_prompt_id():
     fake = FakeComfy(wait_exc=ComfyTimeout("pid-42"))
     client, _ = build(fake)
-    r = client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p"})
+    r = client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p"})
     assert r.status_code == 504
     assert "pid-42" in r.json()["error"]["message"]
 
 
 def test_inflight_released_after_request():
     client, _ = build(max_inflight=1)
-    client.post("/v1/images/generations", json={"model": "flux2-9b", "prompt": "p"})
+    client.post("/v1/images/generations", json={"model": "qwen-image-2.1", "prompt": "p"})
     # slot should be free again
     assert client.app.state.inflight.acquire() is True

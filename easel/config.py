@@ -3,23 +3,20 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Literal
 
 @dataclass(frozen=True)
 class ModelSpec:
     unet: str
     clip: str
-    backend: Literal["flux2", "qwen_image_2_1"] = "flux2"
+    backend: Literal["qwen_image_2_1"] = "qwen_image_2_1"
     vae: str | None = None
     default_steps: int | None = None
 
 
 # OpenAI model id -> ComfyUI files and graph settings. Only place model names are defined.
-# Each klein UNET needs its matching qwen text encoder (dims differ):
-#   9b -> qwen-3-8b (12288-dim), 4b -> qwen-3-4b (7680-dim).
 MODELS = {
-    "flux2-9b": ModelSpec("flux-2-klein-9b-fp8.safetensors", "qwen_3_8b_fp8mixed.safetensors"),
-    "flux2-4b": ModelSpec("flux-2-klein-4b-fp8.safetensors", "qwen_3_4b_fp4_flux2.safetensors"),
     "qwen-image-2.1": ModelSpec(
         "qwen_image_2.1_int8_convrot.safetensors",
         "qwen3vl_8b_int8_convrot.safetensors",
@@ -29,7 +26,7 @@ MODELS = {
     ),
 }
 
-# Flux.2 latent constraints.
+# Image API dimension constraints.
 _MULTIPLE = 16
 _MIN_DIM = 256
 _MAX_DIM = 1536
@@ -57,7 +54,7 @@ def _round_clamp(value: int) -> int:
 
 
 def parse_size(size: str | None) -> tuple[int, int] | None:
-    """Parse an OpenAI `size` string into (width, height) snapped to Flux.2's
+    """Parse an OpenAI `size` string into (width, height) snapped to the image
     16px grid and clamped to a sane range. Returns None for None/""/"auto"
     (caller decides the default or derives from the input image).
 
@@ -95,20 +92,23 @@ class Settings:
     default_steps: int
     variation_prompt: str
     prompt_separator: str
+    image_job_dir: str = str(Path.home() / ".local/share/easel/jobs")
 
     @classmethod
     def from_env(cls, env: dict | None = None) -> "Settings":
         env = os.environ if env is None else env
         return cls(
-            comfy_url=env.get("COMFY_URL_FLUX", "http://comfy-docker-tailscale-serve-1:8188"),
+            comfy_url=_clean(env.get("COMFY_URL_IMAGE")) or _clean(env.get("COMFY_URL_FLUX"))
+                or "http://comfy-docker-tailscale-serve-1:8188",
             comfy_video_url=_clean(env.get("COMFY_URL_VIDEO")),
             api_key=_clean(env.get("EASEL_API_KEY")),
             job_timeout=float(env.get("COMFY_JOB_TIMEOUT", "600")),
             max_inflight=int(env.get("COMFY_MAX_INFLIGHT", "1")),
             default_response_format=env.get("EASEL_DEFAULT_RESPONSE_FORMAT", "b64_json"),
-            default_steps=int(env.get("EASEL_DEFAULT_STEPS", "8")),
+            default_steps=int(env.get("EASEL_DEFAULT_STEPS", "25")),
             variation_prompt=env.get(
                 "EASEL_VARIATION_PROMPT", "recreate this image, same composition and style"
             ),
             prompt_separator=env.get("EASEL_PROMPT_SEPARATOR", "|||"),
+            image_job_dir=_clean(env.get("EASEL_JOB_DIR")) or cls.image_job_dir,
         )

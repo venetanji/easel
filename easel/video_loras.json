@@ -1,0 +1,886 @@
+[
+  {
+    "id": "camera-dolly-in",
+    "kind": "camera",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-In",
+    "revision": "cc976355a158a07fc70ec45ca961fa30661e80f9",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-lora-camera-control-dolly-in.safetensors",
+        "bytes": 327309208,
+        "sha256": "0da937d528ea619c95859ad0c5cab012c7213fe058b7cb289e2a513ec351f237"
+      }
+    ],
+    "supported": true,
+    "requires": [],
+    "trigger": null,
+    "validation": "t2v_execution_tested",
+    "tested_workflows": [
+      "t2v:512x320:2s:strength-0.8"
+    ]
+  },
+  {
+    "id": "camera-dolly-left",
+    "kind": "camera",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Left",
+    "revision": "75cdba2244db6e2934d06095dd8bb6efa33006f6",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-lora-camera-control-dolly-left.safetensors",
+        "bytes": 327309208,
+        "sha256": "fdd28ee1a53e5413d74b90064c7ec0fe98b78457b5da06c0c9c4ea5810d1f5f6"
+      }
+    ],
+    "supported": true,
+    "requires": [],
+    "trigger": null,
+    "validation": "t2v_execution_tested",
+    "tested_workflows": [
+      "t2v:512x320:2s:strength-0.8"
+    ]
+  },
+  {
+    "id": "camera-dolly-out",
+    "kind": "camera",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Out",
+    "revision": "8e3560fdc7004a6d7a2dd29559fe73200357fbcc",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-lora-camera-control-dolly-out.safetensors",
+        "bytes": 327309208,
+        "sha256": "554c30e64fa57b6c98e059f1b3ccabc50ad85195aab0911aed317b714f8d644d"
+      }
+    ],
+    "supported": true,
+    "requires": [],
+    "trigger": null,
+    "validation": "t2v_execution_tested",
+    "tested_workflows": [
+      "t2v:512x320:2s:strength-0.8"
+    ]
+  },
+  {
+    "id": "camera-dolly-right",
+    "kind": "camera",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-LoRA-Camera-Control-Dolly-Right",
+    "revision": "0c0a2f9fd886da63f5954b220de0d6f034f4056d",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-lora-camera-control-dolly-right.safetensors",
+        "bytes": 327309208,
+        "sha256": "ee1a3a34dc21c6b61a4c5775756dd0fab8700e06dd35658c852c0127202aa5dd"
+      }
+    ],
+    "supported": true,
+    "requires": [],
+    "trigger": null,
+    "validation": "t2v_execution_tested",
+    "tested_workflows": [
+      "t2v:512x320:2s:strength-0.8"
+    ]
+  },
+  {
+    "id": "camera-jib-down",
+    "kind": "camera",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-LoRA-Camera-Control-Jib-Down",
+    "revision": "e468d94d6f30c601e4d7784adfa4aa8685de84b3",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-lora-camera-control-jib-down.safetensors",
+        "bytes": 2214978664,
+        "sha256": "5a2f72b231841f998a46b949271fa0bcec21012d4238a53e7eb4762bc828bee3"
+      }
+    ],
+    "supported": true,
+    "requires": [],
+    "trigger": null,
+    "validation": "t2v_execution_tested",
+    "tested_workflows": [
+      "t2v:512x320:2s:strength-0.8"
+    ]
+  },
+  {
+    "id": "camera-jib-up",
+    "kind": "camera",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-LoRA-Camera-Control-Jib-Up",
+    "revision": "19d8f5528b15d3e153d8774fe8d36889714a4b41",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-lora-camera-control-jib-up.safetensors",
+        "bytes": 2214978664,
+        "sha256": "c4e8bd628238caf20079515ba2bce5770fa1108e6ed8c1d403a3179a68dce77f"
+      }
+    ],
+    "supported": true,
+    "requires": [],
+    "trigger": null,
+    "validation": "t2v_execution_tested",
+    "tested_workflows": [
+      "t2v:512x320:2s:strength-0.8"
+    ]
+  },
+  {
+    "id": "camera-static",
+    "kind": "camera",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-LoRA-Camera-Control-Static",
+    "revision": "ba623881aa5d59559a8b26c41beb4b28253b8cae",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-lora-camera-control-static.safetensors",
+        "bytes": 2214978664,
+        "sha256": "6b79aad7ecdd60aef07f39177d1ac225a6608806086af94848436fec432e2d0d"
+      }
+    ],
+    "supported": true,
+    "requires": [],
+    "trigger": null,
+    "validation": "t2v_execution_tested",
+    "tested_workflows": [
+      "t2v:512x320:2s:strength-0.8"
+    ]
+  },
+  {
+    "id": "cinemagraph",
+    "kind": "generation",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-LoRA-Cinemagraph",
+    "revision": "8e5e88efcf59ff0efa6f9dcf7164c7a7d72c4022",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-lora-cinemagraph-0.9.safetensors",
+        "bytes": 201462650,
+        "sha256": "fcd06225e1646080cbb21958a25c9f339ee484519e798bfb00c9b91022cfccfa"
+      }
+    ],
+    "supported": true,
+    "requires": [
+      "input_reference"
+    ],
+    "trigger": "CINEMAGRAPH_MOTION",
+    "validation": "i2v_execution_tested",
+    "tested_workflows": [
+      "i2v:512x320:2s:strength-1.0"
+    ]
+  },
+  {
+    "id": "slow-motion",
+    "kind": "speed",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-LoRA-Slow-Motion-Control",
+    "revision": "c7a014b985023874de6000fc791b959dbd46a0a8",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-lora-slow-motion-control-1.0.safetensors",
+        "bytes": 654474448,
+        "sha256": "59d2b02bec69cdaf7d06ae297b9408c6a210919de0020938fa455e8df49cfad3"
+      }
+    ],
+    "supported": true,
+    "requires": [
+      "input_reference",
+      "motion_speed"
+    ],
+    "trigger": null,
+    "validation": "i2v_execution_tested",
+    "tested_workflows": [
+      "i2v:512x320:2s:strength-1.0:motion-speed-0.2"
+    ]
+  },
+  {
+    "id": "clean-plate",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Clean-Plate",
+    "revision": "5403b2b77e9994e0ae2e549e9933d06c9e8df26f",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-clean-plate-1.0.safetensors",
+        "bytes": 327318439,
+        "sha256": "27f4f7ba552d3bf7273dd817291123a5934f17e7698ca9cd8945b079a5358393"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "colorization",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Colorization",
+    "revision": "a2b3d526bfe3b251ba61cdfbf93deb51eb607198",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-colorization-0.9.safetensors",
+        "bytes": 906080571,
+        "sha256": "0fe109f249778531442ddca35251e1eed0e44c98a7d7f4344e353b878ed98b6f"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "day-to-night",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Day-To-Night",
+    "revision": "52aac758c153f9a74a6f6fe08cf92d2167f3c184",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-day-to-night-0.9.safetensors",
+        "bytes": 327318440,
+        "sha256": "2212838ea446628a07eddb57734427b2150e9cf159b19360cda28365a30b275b"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "deblur",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Deblur",
+    "revision": "7d0cf41dcc6c93d763346e17f76d5f8d64d0e2ff",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-deblur-0.9.safetensors",
+        "bytes": 906080571,
+        "sha256": "62dce32f671429c0ca98fdba997cabb9925fcfe79bbf788c5aa62a3a4c4a5a93"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "decompression",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Decompression",
+    "revision": "25f4a063c188c05a9e0485d211aa5df7f5596bd6",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-decompression-0.9.safetensors",
+        "bytes": 906080571,
+        "sha256": "dd42b8fb53e2fb004bc36479ce4f1ea977ec5ba2160aba51e0fbfdcce00db0b1"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ingredients",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Ingredients",
+    "revision": "12040e4091ac2008d3906a594e31a7fb1ab9d546",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-ingredients-0.9.safetensors",
+        "bytes": 1308787472,
+        "sha256": "ff873a5beada3c579a8137c7c53343916f78bcc9a529ba910143073fe8715e95"
+      }
+    ],
+    "supported": true,
+    "requires": [
+      "lora_reference"
+    ],
+    "trigger": null,
+    "validation": "ic_execution_tested",
+    "min_seconds": 5,
+    "tested_workflows": [
+      "reference-sheet:640x384:5s:strength-1.0"
+    ]
+  },
+  {
+    "id": "ltx-2-canny-control",
+    "kind": "ic",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-IC-LoRA-Canny-Control",
+    "revision": "28be96236294914042a1605f37e3f7812b45f43f",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-ic-lora-canny-control.safetensors",
+        "bytes": 654465256,
+        "sha256": "a95878f53b9fc19e2a3043472f32cc9dd9674b04293abcad4d553fe6114a62e2"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2-depth-control",
+    "kind": "ic",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-IC-LoRA-Depth-Control",
+    "revision": "a0cbd62153a09d197d5c3d74efa804d7d60af44d",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-ic-lora-depth-control.safetensors",
+        "bytes": 654465256,
+        "sha256": "16abe99187f46990e60fbd68cc2c23fe77af024b2701963fddba2d37324ed088"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2-detailer",
+    "kind": "ic",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-IC-LoRA-Detailer",
+    "revision": "4c385b23dabce40736f37454ef8887f177ce96b0",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-ic-lora-detailer.safetensors",
+        "bytes": 2617401920,
+        "sha256": "05efdae9e472e06d168e122f5ebb890e7ef348cc047cf9876da6504c36d7d0e2"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2-pose-control",
+    "kind": "ic",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-IC-LoRA-Pose-Control",
+    "revision": "ecdabfb03acd2e807c90ea260ccc136140e7ac80",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-ic-lora-pose-control.safetensors",
+        "bytes": 654465256,
+        "sha256": "61816bf0985d4470c456160deec65df69188ae45d553e5aa8f1252fc543bc8aa"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2-union-control",
+    "kind": "ic",
+    "family": "ltx-2",
+    "repo_id": "Lightricks/LTX-2-19b-IC-LoRA-Union-Control",
+    "revision": "b96421dd928263c1d2c113bc50e92157babbba51",
+    "collection": "ltx-2",
+    "gated": false,
+    "files": [
+      {
+        "filename": "ltx-2-19b-ic-lora-union-control-ref0.5.safetensors",
+        "bytes": 654465296,
+        "sha256": "cd342e0dcf7754d8b36135b5e768b0f0e820703acd372adc49e53de0b00a931b"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-cinemagraph",
+    "kind": "generation",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-LoRA-Cinemagraph",
+    "revision": "ddcbffe724f91703756f76815f0b66db0b4a9dbb",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-lora-cinemagraph-0.9.safetensors",
+        "bytes": 201453416,
+        "sha256": "7b3431513fc81a280dad8c9902f476847a353fc37bce575e7440d2688c3fa8f9"
+      }
+    ],
+    "supported": false,
+    "requires": [],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-clean-plate",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Clean-Plate",
+    "revision": "95adb8dc55dba71c732e3b810dfa865fa72a17d0",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-clean-plate-1.0.safetensors",
+        "bytes": 327309305,
+        "sha256": "a1b573a9649df549901ae6c5571a6d305d0620aed8953f39536e34da4ca01d6a"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-colorization",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Colorization",
+    "revision": "cc61e42fc672df1969307a32830506a668da8592",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-colorization-0.9.safetensors",
+        "bytes": 906071437,
+        "sha256": "092fb0e1f65f6a750586f1c0994a89c4fd85fe43fecb823f7f59463338da4e13"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-cross-eyed",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Cross-Eyed",
+    "revision": "98f4263b3f0d50fa99c05383fddf5e1cc920f21a",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-cross-eyed-0.9.safetensors",
+        "bytes": 327309305,
+        "sha256": "afce58f60fb7e47d56a85443b0aa5c09e02c3b10e847310af52935827b727cc8"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-day-to-night",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Day-To-Night",
+    "revision": "f0df4ecc986c8bce788ab7ad1c230bcda52f66d5",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-day-to-night-0.9.safetensors",
+        "bytes": 327309305,
+        "sha256": "984771a6aae278c42538984a22a74b4a57549463b47483e8ebd0d40d02aa9f3a"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-deblur",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Deblur",
+    "revision": "4b10fd3b154ae0119936e9d3f922d32a2f0a9422",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-deblur-0.9.safetensors",
+        "bytes": 906071437,
+        "sha256": "dcdd73b57c2c4d5f5bc6535e825f4758b654a583bc991caa50c6809b6990b4ab"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-decompression",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Decompression",
+    "revision": "55a442f01d5254b5562f8710ddb096188e0b8828",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-decompression-0.9.safetensors",
+        "bytes": 906071437,
+        "sha256": "cf76f7cb10e9605dd2322ae0b0eba68438837017a614ef22818891e87f255d0d"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-foley-v2a",
+    "kind": "generation",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-LoRA-Foley-V2A",
+    "revision": "74c2ed6d3b81beab32f86d488e6cfd08e2e2518d",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-lora-foley-v2a-1.0.safetensors",
+        "bytes": 226709270,
+        "sha256": "1bc16020f3937f1dc4957b24c713bc04ec550d6502db8c3e1dd822c412e1fb85"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "audio_generation_workflow"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-in-outpainting",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-In-Outpainting",
+    "revision": "554060ba18950e5fd5e91e6a9ab2f55852fd05a4",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-in-outpainting-0.9.safetensors",
+        "bytes": 1308778338,
+        "sha256": "73dd0841c0d4f0eb26fb1f017781b841b2752021944ac5ecefe57917f6dae6b5"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-ingredients",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Ingredients",
+    "revision": "dcc403d92aa0f5a983c5dbc7282503ca52f73a08",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-ingredients-0.9.safetensors",
+        "bytes": 1308778338,
+        "sha256": "515e4e139001ac6282357a5b35372e42e98b3affd5fcc886a52242abeed19559"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_sheet",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-instant-shave",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Instant-Shave",
+    "revision": "9dfeda97c29289ac526b38533eaafca56867b68d",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-instant-shave-0.9.safetensors",
+        "bytes": 654465349,
+        "sha256": "04231f1befeda653ab98081dd0f58114b9bc71782cdc687239a1610a39a9b0a2"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-pixel-spatial-upscaler",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Pixel-Spatial-Upscaler",
+    "revision": "1c56f36dc45963866dd955a33531416350134318",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-pixel-spatial-upscaler-x2-0.9.safetensors",
+        "bytes": 654465286,
+        "sha256": "0667334e23af9fc0ab3fdff2e059c805ac0d162b1f96f18a462801478027451e"
+      },
+      {
+        "filename": "ltx-2.3-22b-ic-lora-pixel-spatial-upscaler-x4-0.9.safetensors",
+        "bytes": 654465286,
+        "sha256": "5b6370c3cc3a9a773f3655a411fd8ea4b47f4237bd2288a35b3291e2a33840f5"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-relight",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Relight",
+    "revision": "65eeff0e21fc139b30833a284fbd74e0a770a76d",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-relight-1.0.safetensors",
+        "bytes": 327309305,
+        "sha256": "c0d519f83681395d160e115829a9044d7d2ec013be6a2655834d235a2e866ebd"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "ltx-2.3-water-simulation",
+    "kind": "ic",
+    "family": "ltx-2.3",
+    "repo_id": "Lightricks/LTX-2.3-22b-IC-LoRA-Water-Simulation",
+    "revision": "2e658fa9ee4e4d9eb01353355c67d00ad4e1e3bb",
+    "collection": "ltx-23-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.3-22b-ic-lora-water-simulation-0.9.safetensors",
+        "bytes": 906071437,
+        "sha256": "19ad9007d78d88d19623fdeb9245298565bb4f30aebe829ad5b65fa7f8e52e87"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "pixel-upscaler",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Pixel-Spatial-Upscaler",
+    "revision": "380e63e764cad353c47a8e7c9c7ad6095d25e814",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-pixel-spatial-upscaler-x2-1.0.safetensors",
+        "bytes": 327322640,
+        "sha256": "984851b769ea2bcb4c9e0a239a7676239e42c6a6001ddc69943b41ff0b283c1d"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "refine-details",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Refine-Details",
+    "revision": "4912c478b35dd96b6cdcc5f7c7ff9d72c2c57929",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-refine-details-1.0.safetensors",
+        "bytes": 1308787534,
+        "sha256": "771a84f70e143af89867fc714ebbf7bd6edcaa4974c0360cba4a2d292a99f0e6"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "restore",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Restore",
+    "revision": "ed04134f5512bca3f7f36118d36737da09569c35",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-restore-1.0.safetensors",
+        "bytes": 1711643914,
+        "sha256": "357728bc704b3f56e59c5f09cf0540ef3b3fb88a93bbd0b050dbfacd5e05c8b0"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  },
+  {
+    "id": "water-simulation",
+    "kind": "ic",
+    "family": "ltx-2.5",
+    "repo_id": "Lightricks/LTX-2.5-22b-IC-LoRA-Water-Simulation",
+    "revision": "f698d6801a673c636a2c5165ffa07737d7964691",
+    "collection": "ltx-25-creative-lab",
+    "gated": true,
+    "files": [
+      {
+        "filename": "ltx-2.5-22b-ic-lora-water-simulation-0.9.safetensors",
+        "bytes": 906080568,
+        "sha256": "58c244d24a4381858749e66fae9fd1b91aec6b546f83f3f81a7a10b4934a7857"
+      }
+    ],
+    "supported": false,
+    "requires": [
+      "reference_video",
+      "ic_guide"
+    ],
+    "trigger": null,
+    "validation": "not_tested"
+  }
+]

@@ -1,7 +1,7 @@
-"""Integration tests against a real ComfyUI Flux.2 server.
+"""Integration tests against a real ComfyUI Qwen Image 2.1 server.
 
-Opt-in: set EASEL_INTEGRATION=1 and COMFY_URL_FLUX to a reachable server.
-Uses the 4b UNET + low steps to keep it fast.
+Opt-in: set EASEL_INTEGRATION=1 and COMFY_URL_IMAGE to a reachable server.
+Uses an explicit low step count to bound protocol smoke tests.
 """
 import dataclasses
 import io
@@ -19,7 +19,7 @@ pytestmark = pytest.mark.integration
 if os.environ.get("EASEL_INTEGRATION") != "1":
     pytest.skip("set EASEL_INTEGRATION=1 to run integration tests", allow_module_level=True)
 
-MODEL = "flux2-4b"
+MODEL = "qwen-image-2.1"
 SIZE = "512x512"
 STEPS = 4
 
@@ -27,7 +27,7 @@ STEPS = 4
 def _settings():
     return dataclasses.replace(
         Settings.from_env({}),
-        comfy_url=os.environ.get("COMFY_URL_FLUX", "http://10.99.0.7:8188"),
+        comfy_url=os.environ.get("COMFY_URL_IMAGE") or os.environ.get("COMFY_URL_FLUX", "http://10.99.0.7:8188"),
         job_timeout=300,
         max_inflight=1,
     )
@@ -85,7 +85,7 @@ def test_multiprompt_generation_fans_out(client):
 
 
 def test_edit_without_size_derives_from_image(client):
-    # No `size` -> size derived from the (non-square) input via GetImageSize.
+    # Qwen's reference encoder derives an aligned canvas from the input aspect ratio.
     r = client.post("/v1/images/edits",
                     data={"model": MODEL, "prompt": "add soft morning light", "steps": str(STEPS)},
                     files={"image": ("wide.png", _red_png((768, 512)), "image/png")})

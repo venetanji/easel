@@ -7,13 +7,6 @@ from easel.config import MODELS, resolve_model, parse_size, UnknownModelError, S
 # ---- model table ----
 
 def test_resolve_known_models():
-    nine = resolve_model("flux2-9b")
-    assert nine.unet == "flux-2-klein-9b-fp8.safetensors"
-    assert nine.clip == "qwen_3_8b_fp8mixed.safetensors"
-    four = resolve_model("flux2-4b")
-    assert four.unet == "flux-2-klein-4b-fp8.safetensors"
-    # klein-4b needs the 4b text encoder (7680-dim), not the 8b one
-    assert four.clip == "qwen_3_4b_fp4_flux2.safetensors"
     qwen = resolve_model("qwen-image-2.1")
     assert qwen.unet == "qwen_image_2.1_int8_convrot.safetensors"
     assert qwen.clip == "qwen3vl_8b_int8_convrot.safetensors"
@@ -23,7 +16,13 @@ def test_resolve_known_models():
 
 
 def test_model_table_ids():
-    assert set(MODELS) == {"flux2-9b", "flux2-4b", "qwen-image-2.1"}
+    assert set(MODELS) == {"qwen-image-2.1"}
+
+
+@pytest.mark.parametrize("model", ["flux2-9b", "flux2-4b", "flux-2.5"])
+def test_retired_flux_models_are_not_resolved(model):
+    with pytest.raises(UnknownModelError):
+        resolve_model(model)
 
 
 def test_resolve_unknown_model_raises():
@@ -74,7 +73,7 @@ def test_settings_defaults():
     assert s.job_timeout == 600
     assert s.max_inflight == 1
     assert s.default_response_format == "b64_json"
-    assert s.default_steps == 8
+    assert s.default_steps == 25
     assert s.variation_prompt
     assert s.prompt_separator == "|||"
 
@@ -105,3 +104,18 @@ def test_settings_from_env_overrides():
 def test_settings_blank_api_key_is_none():
     assert Settings.from_env({"EASEL_API_KEY": ""}).api_key is None
     assert Settings.from_env({"EASEL_API_KEY": "   "}).api_key is None
+
+
+def test_image_job_directory_override_and_blank_default():
+    default = Settings.from_env({}).image_job_dir
+    assert Settings.from_env({"EASEL_JOB_DIR": "/private/jobs"}).image_job_dir == "/private/jobs"
+    assert Settings.from_env({"EASEL_JOB_DIR": "  "}).image_job_dir == default
+
+
+def test_image_backend_url_precedence_and_legacy_compatibility():
+    assert Settings.from_env({"COMFY_URL_IMAGE": " http://image:1 ",
+                              "COMFY_URL_FLUX": "http://legacy:2"}).comfy_url == "http://image:1"
+    assert Settings.from_env({"COMFY_URL_IMAGE": " ",
+                              "COMFY_URL_FLUX": "http://legacy:2"}).comfy_url == "http://legacy:2"
+    assert Settings.from_env({"COMFY_URL_IMAGE": "", "COMFY_URL_FLUX": " "}).comfy_url == \
+        Settings.from_env({}).comfy_url

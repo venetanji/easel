@@ -27,5 +27,5 @@ packages = ["easel"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 markers = [
-    "integration: hits a real ComfyUI server (opt-in, needs COMFY_URL_FLUX)",
+    "integration: hits a real ComfyUI server (opt-in, needs COMFY_URL_IMAGE)",
 ]
