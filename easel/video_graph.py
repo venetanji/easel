@@ -49,8 +49,11 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
                   seed: int | None = None, loras: list[tuple[str, float]] | None = None,
                   motion_speed: float | None = None,
                   ic_lora: tuple[str, float] | None = None,
-                  reference_image: str | None = None, reference_strength: float = 1.0) -> dict:
+                  reference_image: str | None = None, reference_strength: float = 1.0,
+                  guiding_frames: list[tuple[str, int, float]] | None = None) -> dict:
     """Build the ComfyUI graph used by the native LTX-2.5 T2V and I2V templates."""
+    if guiding_frames and (input_image or ic_lora or reference_image):
+        raise ValueError("guiding frames cannot be combined with first-image or IC reference mode")
     g = WorkflowGraph()
     model = g.node("UNETLoader", unet_name=UNET_NAME, weight_dtype="default")
     for filename, strength in loras or []:
@@ -107,11 +110,20 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
         "LTXVEmptyLatentAudio", frames_number=length, frame_rate=FPS,
         batch_size=1, audio_vae=audio_vae[0],
     )
+    # Single-image AddGuide owns resizing/cropping for each current latent size.
+    # Keep uploaded images intact and do not use legacy LTX-2.3 preprocessing.
+    guide_images = [(g.node("LoadImage", image=filename)[0], frame, strength)
+                    for filename, frame, strength in guiding_frames or []]
     stage1_conditioning = conditioning
     video_samples = latent[0]
     if reference:
         stage1_conditioning = _ic_guide(g, conditioning, video_samples, reference[0],
             video_vae[0], ic_model[1], reference_strength)
+        video_samples = stage1_conditioning[2]
+    for guide_image, frame, strength in guide_images:
+        stage1_conditioning = g.node("LTXVAddGuide", positive=stage1_conditioning[0],
+            negative=stage1_conditioning[1], vae=video_vae[0], latent=video_samples,
+            image=guide_image, frame_idx=frame, strength=strength)
         video_samples = stage1_conditioning[2]
     av_latent = g.node("LTXVConcatAVLatent", video_latent=video_samples, audio_latent=audio[0])
 
@@ -130,10 +142,12 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
     )
     split1 = g.node("LTXVSeparateAVLatent", av_latent=sample1[0])
     video_samples = split1[0]
-    if reference:
+    clean_conditioning = conditioning
+    if reference or guide_images:
         cropped = g.node("LTXVCropGuides", positive=stage1_conditioning[0],
                          negative=stage1_conditioning[1], latent=video_samples)
         video_samples = cropped[2]
+        clean_conditioning = cropped
 
     upscaler = g.node("LatentUpscaleModelLoader", model_name=UPSCALE_MODEL_NAME)
     video_latent = g.node(
@@ -145,11 +159,16 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
             "LTXVImgToVideoInplace", vae=video_vae[0], image=image[0], latent=video_latent[0],
             strength=1.0, bypass=False,
         )
-    stage2_conditioning = conditioning
+    stage2_conditioning = clean_conditioning if guide_images else conditioning
     video_samples = video_latent[0]
     if reference:
         stage2_conditioning = _ic_guide(g, conditioning, video_samples, reference[0],
             video_vae[0], ic_model[1], reference_strength)
+        video_samples = stage2_conditioning[2]
+    for guide_image, frame, strength in guide_images:
+        stage2_conditioning = g.node("LTXVAddGuide", positive=stage2_conditioning[0],
+            negative=stage2_conditioning[1], vae=video_vae[0], latent=video_samples,
+            image=guide_image, frame_idx=frame, strength=strength)
         video_samples = stage2_conditioning[2]
     av_latent = g.node("LTXVConcatAVLatent", video_latent=video_samples, audio_latent=split1[1])
 
@@ -167,7 +186,7 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
     )
     split2 = g.node("LTXVSeparateAVLatent", av_latent=sample2[0])
     video_samples = split2[0]
-    if reference:
+    if reference or guide_images:
         cropped = g.node("LTXVCropGuides", positive=stage2_conditioning[0],
                          negative=stage2_conditioning[1], latent=video_samples)
         video_samples = cropped[2]

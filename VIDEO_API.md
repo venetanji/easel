@@ -27,6 +27,8 @@ points to `comfy-docker-tailscale-serve-video-1` on `tailscale-mesh`.
 | `seed` | no | Integer `0` through `2**64-2`; both sampling-pass seeds must fit unsigned 64 bits |
 | `lora_reference` | no | PNG, JPEG, or WebP reference sheet, required with `ingredients` |
 | `lora_reference_strength` | no | Finite `0` through `1`, default `1`; requires `ingredients` |
+| `guiding_frames` | no | JSON array of 1–8 `{image_index, frame_index, strength?}` entries |
+| `guiding_images` | no | Repeated still PNG/JPEG/WebP uploads, one per guiding-frame entry |
 
 Fractional durations are not accepted. At 24 FPS, the workflow uses
 `seconds * 24 + 1` frames for LTX frame alignment, so a clip is approximately
@@ -39,13 +41,65 @@ both passes. The nominal `1280x720` and `720x1280` presets currently decode to
 of 32. The other presets are aligned. Low presets are useful for bounded tests,
 not evidence of delivery-resolution quality or high-resolution VRAM capacity.
 
+## Versioned capabilities and timed image guides
+
+Authenticated `GET /v1/videos/capabilities` returns the `video.capabilities`
+object, `schema_version: 1`, model, FPS, accepted durations/sizes, exact seed
+bounds, adapter bounds, upload limits and guiding-frame support. Runtime
+`guiding_frames.available` requires compatible `LTXVAddGuide` and
+`LTXVCropGuides` input/output schemas. Discovery performs no generation or
+uploads. A backend outage is an error, not proof that guides are unsupported.
+
+The guide metadata and files belong to the same multipart request:
+
+```text
+guiding_frames=[{"image_index":0,"frame_index":1,"strength":0.7},{"image_index":1,"frame_index":48,"strength":0.5}]
+guiding_images=@first.png
+guiding_images=@last.png
+```
+
+For a two-second video, pixel-frame positions run from 0 through 48 inclusive.
+Positions are integers, not latent-frame indices or seconds. There is no
+multiple-of-eight restriction for single-image guides. Every image index must
+identify exactly one corresponding upload; frame positions must be unique.
+Easel sorts anchors by frame position while retaining their image association.
+Finite strengths are 0–1, default 1, and retain the same value in both passes.
+Guidance is soft conditioning: even strength 1 does not promise a pixel-perfect
+endpoint, exact motion, seamless boundary or loop.
+
+All reference uploads share a 32 MiB combined limit. Timed guides additionally
+must decode as one still image, with at most 32 megapixels; animated PNG/WebP
+and malformed/mislabeled files are rejected. Guide mode cannot be combined
+with `input_reference`, Ingredients or `lora_reference`. Camera/regular LoRAs
+can be used where their existing requirements allow it. Cinemagraph and
+slow-motion still require `input_reference`, so cannot accompany timed guides.
+Unknown fields, repeated singleton fields, unpaired uploads and invalid options
+are rejected before backend upload or submission instead of being ignored.
+
+Guides enter the **video-only** latent before audio concatenation. Guide tails
+and conditioning metadata are cropped before the 2x spatial upscale. Guides
+are then reapplied to the cleaned conditioning/upsampled latent and cropped
+again before decode. Existing model identities, 8+3 schedules, seed/seed+1 and
+generated audio remain unchanged. Full control-video/IC adapters are separate
+workflows and are not enabled by this path.
+
+The new two-pass temporal guide path is `graph_contract_tested`, backed by the
+[official LTX-2.5 first/last blueprint](https://github.com/Comfy-Org/ComfyUI/blob/e9027f2b30f37bb3052714eb08fcf479542f4fc0/blueprints/First%20%26%20Last%20Frame%20to%20Video%20(LTX-2.5).json)
+and [node semantics](https://github.com/Comfy-Org/ComfyUI/blob/e9027f2b30f37bb3052714eb08fcf479542f4fc0/comfy_extras/nodes_lt.py#L251-L519).
+It has not been GPU/visually verified in this change. The official blueprint is
+single-stage; composing its guide/crop boundary across Easel's two stages is
+covered by graph contract tests, not claimed as an official two-stage recipe.
+Use an explicitly authorized bounded pilot before scaling. See
+[graph provenance](GRAPH_PROVENANCE.md) for the current reuse boundary.
+
 ## Adapter discovery and requirements
 
 Authenticated `GET /v1/videos/loras` returns the curated identities, pinned
 filenames/revisions/checksums, required input fields, `supported`, `validation`,
 and live backend `installed` state. Installation is not workflow validation.
 Unregistered paths and duplicate IDs are rejected. Installed but unsupported
-IC adapters remain discoverable and are rejected before uploads/submission.
+IC adapters remain discoverable and are rejected before uploads/submission. JavaScript consumers must send `seed` as an exact
+decimal string; a large JavaScript number can silently lose precision.
 Missing selected assets return HTTP 503 (`lora_not_installed`).
 
 Example form fields:
@@ -119,3 +173,21 @@ no video cancellation or idempotency/recovery endpoint. Polling never submits
 a replacement job. Do not treat receipt loss as permission to retry blindly.
 
 For queued image generation, edits and variations, see `IMAGE_JOBS.md`.
+
+## Offline cross-repository checks
+
+The default server `pytest` suite uses fake ComfyUI backends. The extra
+cross-language contract suite captures actual Media MCP `FormData`, replays
+those exact parts through FastAPI, and asserts guide/LoRA/seed graph inputs.
+It also parses the real server discovery/catalog through Media MCP. Build the
+client package first, then run from the server checkout:
+
+```bash
+EASEL_MEDIA_MCP_SOURCE=/path/to/easel-client python -m pytest -q tests/test_mcp_contract.py
+```
+
+The companion CLI has an in-process `contract/server_contract.py` suite using
+`EASEL_SERVER_SOURCE=/path/to/easel`. Neither contract suite starts real GPU
+work or requires an API key. The client's separate live runner defaults to help;
+actual camera/guided pilots require a local key and explicit cost opt-in. Keep
+accepted receipts and use resume, never replacement submissions after a timeout.
