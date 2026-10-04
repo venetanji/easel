@@ -208,6 +208,12 @@ def test_guides_require_decodable_single_frame_images(api, kind):
         files={'guiding_images': ('guide.png', payload, mime)})
     assert response.status_code == 400
     assert response.json()['error']['param'] == 'guiding_images'
+    expected = {
+        'malformed': 'invalid guiding image: image could not be decoded safely',
+        'animated-png': 'invalid guiding image: bytes do not match the declared image type',
+        'animated-webp': 'invalid guiding image: guides must contain exactly one still image',
+    }[kind]
+    assert response.json()['error']['message'] == expected
     assert backend.info_calls == backend.queue_calls == 0 and not backend.uploaded
 
 
@@ -220,6 +226,9 @@ def test_truncated_jpeg_is_rejected_before_submission(api):
         'guiding_frames': '[{"image_index":0,"frame_index":0}]'},
         files={'guiding_images': ('guide.jpg', payload, 'image/jpeg')})
     assert response.status_code == 400
+    assert response.json()['error']['message'] == (
+        'invalid guiding image: image could not be decoded safely')
+    assert response.json()['error']['param'] == 'guiding_images'
     assert backend.info_calls == backend.queue_calls == 0 and not backend.uploaded
 
 

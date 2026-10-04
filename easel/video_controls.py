@@ -114,16 +114,21 @@ async def validate_video_uploads(uploads: list[tuple[str, UploadFile]]) -> None:
                     warnings.simplefilter('error', Image.DecompressionBombWarning)
                     with Image.open(upload.file) as image:
                         if image.format not in ('PNG', 'JPEG', 'WEBP') or image.get_format_mimetype() != upload.content_type:
-                            raise ValueError('bytes do not match the declared image type')
+                            raise APIError(400, 'invalid guiding image: bytes do not match the declared image type',
+                                           param=field)
                         if getattr(image, 'n_frames', 1) != 1:
-                            raise ValueError('guides must contain exactly one still image')
+                            raise APIError(400, 'invalid guiding image: guides must contain exactly one still image',
+                                           param=field)
                         if image.width * image.height > 32_000_000:
-                            raise ValueError('guide images must not exceed 32 megapixels')
+                            raise APIError(400, 'invalid guiding image: guide images must not exceed 32 megapixels',
+                                           param=field)
                         # verify() alone skips JPEG entropy decoding; load()
                         # rejects truncated/corrupt pixel data within the pixel cap.
                         image.load()
-            except (OSError, ValueError, SyntaxError, Image.DecompressionBombError, Image.DecompressionBombWarning) as exc:
-                raise APIError(400, f'invalid guiding image: {exc}', param=field) from None
+            except (OSError, ValueError, SyntaxError, Image.DecompressionBombError, Image.DecompressionBombWarning):
+                # Decoder diagnostics may expose file objects, paths or addresses.
+                raise APIError(400, 'invalid guiding image: image could not be decoded safely',
+                               param=field) from None
             finally:
                 await upload.seek(0)
 
