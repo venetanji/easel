@@ -58,3 +58,11 @@ graph fixtures, then migrate the registry, model profiles and profile-specific
 pass policy behind these tested API boundaries. Discovery must continue to
 separate code support, installation/node availability, execution evidence and
 visual quality. Credentials, media uploads and job persistence stay with Easel.
+
+## H3 cloud baseline
+
+`easel/h3_graph.py` adapts the unpublished October 2 H3 prototype into Easel's
+graph helper, with independent recipe fixtures and a captured native runtime
+schema. It is not wired into the HTTP API yet. Temporal guidance is graph-only
+evidence, not a completed continuity pilot. See [H3_BASELINE.md](H3_BASELINE.md)
+for pinned ComfyUI/model/workflow pointers and cloud implementation gates.

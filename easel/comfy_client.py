@@ -74,8 +74,16 @@ class ComfyClient:
             data={"overwrite": "true", "type": "input"},
         )
         resp.raise_for_status()
-        body = resp.json()
-        return body["name"], body.get("subfolder", "")
+        try:
+            body = resp.json()
+        except ValueError:
+            raise ComfyError("invalid ComfyUI upload response") from None
+        if not isinstance(body, dict):
+            raise ComfyError("invalid ComfyUI upload response")
+        name, subfolder = body.get("name"), body.get("subfolder", "")
+        if not isinstance(name, str) or not name.strip() or not isinstance(subfolder, str):
+            raise ComfyError("invalid ComfyUI upload response")
+        return name, subfolder
 
     async def submit(self, graph: dict) -> str:
         payload = {"prompt": graph, "client_id": self.client_id}

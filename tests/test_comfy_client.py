@@ -171,3 +171,39 @@ async def test_transport_error_surfaces_as_comfy_error():
     client = make_client(handler)
     with pytest.raises((ComfyError, httpx.HTTPError)):
         await client.submit({"1": {"class_type": "X", "inputs": {}}})
+
+
+INVALID_UPLOAD_RESPONSES = [
+    {'content': b'private diagnostic: not JSON'},
+    {'json': {}}, {'json': []}, {'content': b'null'}, {'json': 'private diagnostic'},
+    {'json': {'name': None}}, {'json': {'name': 42}},
+    {'json': {'name': ''}}, {'json': {'name': '  '}},
+    {'json': {'name': 'image.png', 'subfolder': None}},
+    {'json': {'name': 'image.png', 'subfolder': {}}},
+    {'json': {'name': 'image.png', 'subfolder': 42}},
+    {'json': {'name': 'image.png', 'subfolder': False}},
+]
+
+
+@pytest.mark.parametrize('response_fields', INVALID_UPLOAD_RESPONSES)
+async def test_upload_image_normalizes_malformed_success_to_sanitized_comfy_error(response_fields):
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(200, **response_fields)
+    async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as http:
+        client = ComfyClient('http://comfy', http)
+        with pytest.raises(ComfyError, match='invalid ComfyUI upload response') as caught:
+            await client.upload_image(b'PNGDATA', 'image.png')
+        assert str(caught.value) == 'invalid ComfyUI upload response'
+        assert len(calls) == 1
+
+
+@pytest.mark.parametrize('payload,expected', [
+    ({'name':'renamed.png'}, ('renamed.png','')),
+    ({'name':'renamed.png','subfolder':'valid/folder'}, ('renamed.png','valid/folder')),
+])
+async def test_upload_image_preserves_valid_renamed_name_and_optional_subfolder(payload,expected):
+    async with httpx.AsyncClient(transport=httpx.MockTransport(lambda request: httpx.Response(200,json=payload))) as http:
+        client = ComfyClient('http://comfy', http)
+        assert await client.upload_image(b'PNGDATA','original.png') == expected
