@@ -123,3 +123,24 @@ def test_actual_server_discovery_is_consumed_by_media_mcp(api):
     assert payload['caps']['guiding_frames']['available'] is True
     assert {entry['id'] for entry in payload['loras']} == set(VIDEO_LORAS)
     assert any(not entry['supported'] for entry in payload['loras'])
+
+
+def test_h3_receipt_is_accepted_by_production_media_job_parser(tmp_path):
+    """Timing extensions must remain usable by the published poll/content client."""
+    from tests.test_h3_api import H3Comfy
+    backend = H3Comfy()
+    settings = dataclasses.replace(Settings.from_env({}), comfy_video_url='http://video',
+                                   image_job_dir=str(tmp_path))
+    with TestClient(create_app(settings=settings, comfy=backend, comfy_video=backend)) as client:
+        response = client.post('/v1/videos', data={'model':'minimax-h3','prompt':'shot','frames':'141'})
+        assert response.status_code == 200
+        receipt = response.json()
+        script = r'''
+const {pathToFileURL} = await import('node:url');
+const {readFileSync} = await import('node:fs');
+const {parseMediaJob} = await import(new URL('./media-job.js', pathToFileURL(process.argv[1])).href);
+const input = JSON.parse(readFileSync(0, 'utf8'));
+process.stdout.write(JSON.stringify(parseMediaJob(input, undefined, input.id)));
+'''
+        assert node_run(script, receipt)['id'] == receipt['id']
+        assert node_run(script, client.get('/v1/videos/'+receipt['id']).json())['status'] == 'queued'

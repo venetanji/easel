@@ -29,7 +29,8 @@ from .image_jobs import ImageJobs, wants_async
 from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
 from .video_graph import VIDEO_MODEL_ID, parse_video_size, text_to_video
-from .video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id
+from .video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id, video_timing
+from . import h3_controls, h3_graph
 from .video_controls import (guiding_nodes_available, parse_guiding_frames,
                              validate_video_form, validate_video_uploads, video_capabilities)
 from .video_loras import VIDEO_LORAS, VideoLoRAError, installed_lora_names, parse_video_loras
@@ -327,6 +328,7 @@ async def read_video_job(comfy: ComfyClient, video_id: str,
             completed_at = None
         return ({
             "id": video_id,
+            **video_timing(video_id),
             "object": "video",
             "created_at": created_at,
             "status": status,
@@ -349,6 +351,7 @@ async def read_video_job(comfy: ComfyClient, video_id: str,
             if isinstance(item, list) and len(item) > 1 and item[1] == prompt_id:
                 return ({
                     "id": video_id,
+                    **video_timing(video_id),
                     "object": "video",
                     "created_at": created_at,
                     "status": status,
@@ -446,16 +449,20 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
         created = 1_700_000_000
         model_ids = [*MODELS]
         if settings.comfy_video_url:
-            model_ids.append(VIDEO_MODEL_ID)
+            model_ids.extend([VIDEO_MODEL_ID, h3_graph.VIDEO_MODEL_ID])
         return {"object": "list", "data": [
             {"id": m, "object": "model", "created": created, "owned_by": "easel"}
             for m in model_ids
         ]}
 
     @app.get("/v1/videos/loras")
-    async def list_video_loras(request: Request):
+    async def list_video_loras(request: Request, model: str = VIDEO_MODEL_ID):
         require_auth(settings, request)
         resolve_server("video", settings)
+        if model not in (VIDEO_MODEL_ID, h3_graph.VIDEO_MODEL_ID):
+            raise APIError(400, f"model '{model}' not found", code="model_not_found", param="model")
+        if model == h3_graph.VIDEO_MODEL_ID:
+            return {"object": "list", "model": model, "data": []}
         comfy = request.app.state.comfy_video
         if comfy is None:
             raise APIError(503, "video server is not available", type="api_error",
@@ -472,18 +479,74 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
         ]}
 
     @app.get("/v1/videos/capabilities")
-    async def get_video_capabilities(request: Request):
+    async def get_video_capabilities(request: Request, model: str = VIDEO_MODEL_ID):
         require_auth(settings, request)
         resolve_server("video", settings)
         comfy = request.app.state.comfy_video
         if comfy is None:
             raise APIError(503, "video server is not available", type="api_error",
                            code="video_server_unavailable")
+        if model not in (VIDEO_MODEL_ID, h3_graph.VIDEO_MODEL_ID):
+            raise APIError(400, f"model '{model}' not found", code="model_not_found", param="model")
         try:
+            if model == h3_graph.VIDEO_MODEL_ID:
+                return await h3_controls.capabilities(comfy)
             available = await guiding_nodes_available(comfy)
         except (ComfyError, httpx.HTTPError) as exc:
-            raise APIError(502, str(exc), type="api_error", code="upstream_error")
+            message = "H3 runtime discovery failed" if model == h3_graph.VIDEO_MODEL_ID else str(exc)
+            raise APIError(502, message, type="api_error", code="upstream_error") from None
         return video_capabilities(guides_available=available)
+
+    async def create_h3_video(request: Request):
+        admission = await h3_controls.admit(await request.form())
+        comfy = request.app.state.comfy_video
+        if comfy is None:
+            raise APIError(503, "video server is not available", type="api_error",
+                           code="video_server_unavailable")
+        graph = admission.graph()
+        try:
+            available = await h3_controls.runtime_available(comfy, graph)
+        except (ComfyError, httpx.HTTPError):
+            raise APIError(502, "H3 runtime discovery failed", type="api_error", code="upstream_error") from None
+        if not available:
+            raise APIError(503, "selected native H3 nodes or curated assets are incompatible or unavailable",
+                           type="api_error", code="h3_runtime_unavailable")
+        async with request.app.state.queue_locks["video"]:
+            try:
+                await ensure_queue_capacity(comfy, video=True)
+            except (ComfyError, httpx.HTTPError):
+                raise APIError(502, "video queue discovery failed", type="api_error", code="upstream_error") from None
+            names = []
+            for upload, filename in zip(admission.uploads, admission.names):
+                try:
+                    name, subfolder = await comfy.upload_image(await upload.read(), filename, upload.content_type)
+                except (ComfyError, httpx.HTTPError):
+                    raise APIError(502, "H3 still upload failed", type="api_error", code="upstream_upload_error") from None
+                try:
+                    h3_graph._image_name(name)
+                    if subfolder:
+                        raise ValueError("unexpected managed input subfolder")
+                except ValueError:
+                    raise APIError(502, "upstream returned an unsafe H3 input name", type="api_error", code="upstream_upload_error") from None
+                names.append(name)
+            if len(set(names)) != len(names):
+                raise APIError(502, "upstream returned duplicate H3 input names", type="api_error", code="upstream_upload_error")
+            graph = admission.graph(tuple(names))
+            # Keep outputs isolated for each owner, as with LTX.
+            for node in graph.values():
+                if node["class_type"] == "SaveVideo":
+                    node["inputs"]["filename_prefix"] = f"easel/videos/{uuid.uuid4().hex}"
+            try:
+                prompt_id = await comfy.submit(graph)
+            except ComfySubmitError:
+                raise APIError(502, "ComfyUI rejected the H3 graph", type="api_error", code="upstream_invalid_graph") from None
+            except (ComfyError, httpx.HTTPError):
+                raise APIError(502, "H3 prompt submission failed; do not automatically retry", type="api_error", code="upstream_error") from None
+        created_at = int(time.time())
+        video_id = make_video_id(prompt_id, h3_graph.VIDEO_MODEL_ID, created_at, frames=admission.frames)
+        return {"id": video_id, "object": "video", "created_at": created_at, "status": "queued",
+                "completed_at": None, "expires_at": created_at + VIDEO_TTL_SECONDS,
+                "error": None, "model": h3_graph.VIDEO_MODEL_ID, "progress": 0, **video_timing(video_id)}
 
     @app.post("/v1/videos")
     async def create_video(
@@ -505,6 +568,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
     ):
         require_auth(settings, request)
         resolve_server("video", settings)
+        if model.strip() == h3_graph.VIDEO_MODEL_ID:
+            return await create_h3_video(request)
         validate_video_form(await request.form())
         prompt = prompt.strip()
         model = model.strip()
@@ -680,6 +745,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
         video_id = make_video_id(prompt_id, model, created_at)
         return {
             "id": video_id,
+            **video_timing(video_id),
             "object": "video",
             "created_at": created_at,
             "status": "queued",
@@ -768,6 +834,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
         return {
             "object": "video_queue_item",
             "id": video_id,
+            **video_timing(video_id),
             "status": video["status"],
             "created_at": created_at,
             "expires_at": video["expires_at"],

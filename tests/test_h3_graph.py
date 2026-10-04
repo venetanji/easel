@@ -180,7 +180,7 @@ def test_unsupported_family_controls_are_not_accepted():
             h3.build_t2v("test", **options)
 
 
-def test_h3_baseline_is_not_silently_registered_in_the_http_api(tmp_path):
+def test_h3_is_registered_on_the_video_backend(tmp_path):
     import dataclasses
     from fastapi.testclient import TestClient
     from easel.app import create_app
@@ -192,4 +192,4 @@ def test_h3_baseline_is_not_silently_registered_in_the_http_api(tmp_path):
                                    image_job_dir=str(tmp_path))
     with TestClient(create_app(settings=settings, comfy=backend, comfy_video=backend)) as client:
         model_ids = {entry["id"] for entry in client.get("/v1/models").json()["data"]}
-        assert h3.VIDEO_MODEL_ID not in model_ids
+        assert h3.VIDEO_MODEL_ID in model_ids

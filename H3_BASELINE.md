@@ -1,9 +1,11 @@
 # H3 and temporal-guide cloud baseline (PR #3)
 
-This branch supplies offline graphs, captured runtime contracts, and an
-implementation handoff. H3 is **not yet registered in Easel's HTTP API**.
-Qwen and LTX-2.5 behavior is unchanged. Complete the checklist before enabling
-H3; the local owner reviews, pilots, and deploys the cloud changes.
+This branch supplies offline graphs, captured runtime contracts, and bounded
+HTTP integration for `minimax-h3` on the video backend. Qwen and LTX-2.5
+behavior and defaults are unchanged. Native runtime discovery gates each
+selected H3 graph before queue admission or uploads. The local owner reviews,
+pilots, and deploys these changes; GPU execution and visual review remain
+rollout gates.
 
 ## Available code and fixtures
 
@@ -102,40 +104,105 @@ Source-audio guidance and audio seam handling remain unsupported here.
 
 Work on this PR's branch in focused commits:
 
-- [ ] Register `minimax-h3` on the video backend and add model-specific,
+- [x] Register `minimax-h3` on the video backend and add model-specific,
   authenticated capabilities without changing existing models/defaults.
   Validate model selection; do not silently ignore a capability query.
-- [ ] Add H3-only explicit `frames`, default 124. Reject explicitly supplied
+- [x] Add H3-only explicit `frames`, default 124. Reject explicitly supplied
   `seconds` until an exact mapping is documented; distinguish omission from
   FastAPI's LTX default. Include actual frame/FPS/duration metadata in H3
   receipts without breaking existing receipt/content APIs.
-- [ ] Define typed semantic-reference and temporal-group metadata. Suggested
+- [x] Define typed semantic-reference and temporal-group metadata. Suggested
   group shape: `{frame_index, image_indices}` referencing repeated still
   uploads in the same request, not paths, URLs, or arbitrary graph JSON.
   Reject unknown/empty fields, orphan/duplicate indices, overlaps, strengths,
   invalid bounds, conflicts, and off-grid counts before upstream work.
-- [ ] Validate PNG/JPEG bytes, stillness, safe decode, matching dimensions per
+- [x] Validate PNG/JPEG bytes, stillness, safe decode, matching dimensions per
   guide, aggregate byte/pixel limits, frame/node counts, and safe managed
   input names. Use each uploaded image exactly as declared. The baseline
   only accepts PNG/JPEG names; do not silently pass WebP through it.
-- [ ] Check selected native node schemas/assets; separate code support,
+- [x] Check selected native node schemas/assets; separate code support,
   installed/node-compatible, GPU-executed, and visually reviewed evidence.
   Discovery is read-only and must never load models or submit prompts.
-- [ ] Route FL8 T2V/I2V, REF20 R2V, and experimental REF20 temporal guidance
+- [x] Route FL8 T2V/I2V, REF20 R2V, and experimental REF20 temporal guidance
   without mixing profiles. Reject LTX camera/Ingredients/motion controls and
   unsupported source audio, control video, negative/CFG, or custom sampling.
-- [ ] Preserve authentication, one-owner queue admission, durable receipts,
+- [x] Preserve authentication, one-owner queue admission, durable receipts,
   read-only polling/content retrieval, and no automatic POST retry. Validate
   before upload/queue work; do not replace lost or timed-out receipts.
-- [ ] Replace the baseline's not-registered test with actual HTTP integration
+- [x] Replace the baseline's not-registered test with actual HTTP integration
   tests. Cover FastAPI -> fake-Comfy graphs, capabilities, invalid input with
   zero upstream mutation, cross-model receipts/content, and LTX regressions.
-- [ ] Keep offline tests runnable without Docker, GPU assets, OpenClaw,
+- [x] Keep offline tests runnable without Docker, GPU assets, OpenClaw,
   private files, network, or credentials. Existing cross-client tests remain
   explicit opt-in checks, not silently skipped integration evidence.
-- [ ] Report changed files, tests, live-test gaps, and final commit. Do not
+- [x] Report changed files, tests, live-test gaps, and final commit. Do not
   merge, generate paid media, restart services, or deploy from the cloud
   session; local review, bounded GPU verification, and deployment follow.
+
+## HTTP contract
+
+`GET /v1/videos/capabilities?model=minimax-h3` requires the same authentication
+as generation. Omit `model` for existing LTX capabilities; unknown models fail
+with `model_not_found`. Discovery reads only the selected native node schemas
+and curated asset chooser values. Per-profile `supported` means this code has
+a recipe; `available` means its native runtime contract and assets passed.
+`validation: graph_contract_tested`, `gpu_executed: false`, and
+`visually_reviewed: false` describe this integration's evidence, independent
+of historical native recipe studies. Discovery never submits or loads models.
+`GET /v1/videos/loras?model=minimax-h3` returns an empty model-specific
+catalog: its curated FL8 adapter is fixed by the recipe, not client-selectable.
+An omitted model still returns the existing LTX catalog; unknown models fail.
+
+`POST /v1/videos` accepts multipart `model=minimax-h3`, a nonblank `prompt`,
+optional unsigned decimal `seed` (0..18446744073709551615), `frames` (default
+124, exactly 17k+5 in 124..362), and `size` (only 864x480, also the default).
+Explicit `seconds` is rejected, including LTX's default value when explicitly
+sent. H3 never rounds duration or applies LTX's second-pass seed increment.
+
+Choose conditioning through these typed controls:
+
+- Omit images and metadata for FL8 text to video.
+- One `input_reference` PNG/JPEG still selects FL8 first-frame image to video.
+  It cannot be combined with the following REF20 controls.
+- Repeated `images` uploads plus `semantic_references`, a JSON array such as
+  `[{"image_index":0},{"image_index":1}]`, select ordered semantic Picture
+  references. There are at most two; these are not timeline anchors.
+- `temporal_groups` is a JSON array such as
+  `[{"frame_index":0,"image_indices":[0,1,2,3,4]}]` over repeated `images`
+  uploads. There are at most three nonoverlapping groups, each containing
+  exactly 1, 5, 22, or 39 images in declared order. Each group must fit entirely
+  within the requested output frames and contain images of identical decoded
+  dimensions after EXIF orientation (matching native LoadImage). Temporal
+  groups use experimental REF20 and may coexist with
+  separately indexed semantic references.
+
+Each `images` index must be used exactly once across semantic references and
+all temporal groups. Unknown fields, repeated scalar form fields, repeated
+JSON keys, empty arrays, paths/URLs, orphan or duplicate indices, guide
+strengths, LTX controls, source audio, control video, negative/CFG controls,
+and custom model/sampling controls are rejected before runtime discovery.
+Multipart file names are discarded; managed PNG/JPEG basenames are generated
+by the server. Returned Comfy names must also be safe, unique basenames.
+Uploads must decode as still PNG/JPEG with matching MIME, at most 32 MiB
+combined, 32 million pixels each, and 64 million pixels combined. The maximum
+119 uploads yields a bounded graph (at most 256 nodes); native dimension
+bounds do not widen the conservative output preset.
+
+Receipts retain the existing `video_*` identifier and polling/content routes.
+New H3 IDs add optional `:frames` to the encoded-model component; this remains
+within the published Media MCP job ID character contract. Legacy IDs retain
+their original shape and parse behavior. H3 create/poll/queue responses include
+`frames`, `fps:24`, and `duration:frames/24` even after an API restart, without
+requiring a local timing cache or exposing a replacement job ID. Content GET
+remains read-only; the original authenticated receipt controls retrieval.
+Submission performs one upstream POST with no automatic retry.
+
+Offline integration tests exercise real FastAPI multipart requests with
+captured-schema fake Comfy clients. Cross-language tests are optional:
+`EASEL_MEDIA_MCP_SOURCE=/path/to/built/easel-client` also checks the production
+Media MCP receipt parser and existing LTX FormData regression contracts. Live
+Comfy tests require `EASEL_INTEGRATION=1` separately; offline passing tests are
+not live GPU, temporal-continuity, audio-sync, or visual-review evidence.
 
 ## Evidence and rollout gate
 
