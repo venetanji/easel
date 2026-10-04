@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 from easel.app import create_app
 from easel.config import Settings
 from tests.test_video_duration import FakeVideoComfy
+from tests.test_comfy_client import INVALID_UPLOAD_RESPONSES
 
 SCHEMAS = json.loads((Path(__file__).parent / 'fixtures/h3/runtime_nodes.json').read_text())['nodes']
 
@@ -353,3 +354,33 @@ def test_runtime_list_semantics_must_match_selected_native_graph(api,field):
     backend.schemas['MiniMaxH3ImageToVideo'][field]=[True,False] if field=='output_is_list' else True
     assert submit(client).status_code==503
     assert backend.queue_calls==0 and not backend.uploaded
+
+
+@pytest.mark.parametrize('response_fields', INVALID_UPLOAD_RESPONSES)
+def test_real_comfy_upload_transport_malformed_success_returns_stable_h3_502(tmp_path,response_fields):
+    import httpx
+    from easel.comfy_client import ComfyClient
+    calls=[]
+    def handler(request):
+        calls.append((request.method,request.url.path))
+        if request.url.path.startswith('/object_info/'):
+            name=request.url.path.rsplit('/',1)[1]
+            return httpx.Response(200,json={name:SCHEMAS[name]})
+        if request.url.path=='/queue':
+            return httpx.Response(200,json={'queue_running':[],'queue_pending':[]})
+        if request.url.path=='/upload/image':
+            assert request.method=='POST'
+            assert b'filename="h3_' in request.content
+            return httpx.Response(200,**response_fields)
+        raise AssertionError(f'unexpected mutation: {request.method} {request.url.path}')
+    http=httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    backend=ComfyClient('http://comfy',http)
+    settings=dataclasses.replace(Settings.from_env({}),comfy_video_url='http://video',api_key='secret',image_job_dir=str(tmp_path))
+    with TestClient(create_app(settings=settings,comfy=backend,comfy_video=backend)) as client:
+        client.headers['Authorization']='Bearer secret'
+        response=submit(client,files=[('input_reference',('image.png',png(),'image/png'))])
+    assert response.status_code==502
+    assert response.json()['error']['code']=='upstream_upload_error'
+    assert response.json()['error']['message']=='H3 still upload failed'
+    assert 'private' not in response.text and 'diagnostic' not in response.text
+    assert [path for method,path in calls if method=='POST']==['/upload/image']

@@ -4,12 +4,15 @@ LiteLLM's [`/videos` endpoint documentation](https://docs.litellm.ai/docs/videos
 uses the OpenAI Video Generation API specification and lists OpenAI, Azure,
 Gemini, Vertex AI, and Runway as supported providers. Easel implements that
 request shape and submits the work to the configured ComfyUI video server,
-using the LTX-2.5 workflow.
+using LTX-2.5 or native MiniMax H3 workflows. H3's `frames`, semantic-reference
+and temporal-group fields are Easel model-specific extensions to that shape;
+they are not shared LTX controls. Registration describes server code support,
+not proof of deployment, live runtime compatibility or visual validation.
 
 Set `COMFY_URL_VIDEO` to the ComfyUI video server. The Docker Compose default
 points to `comfy-docker-tailscale-serve-video-1` on `tailscale-mesh`.
 
-## Create a video
+## Create an LTX-2.5 video
 
 `POST /v1/videos` accepts `multipart/form-data`:
 
@@ -41,10 +44,67 @@ both passes. The nominal `1280x720` and `720x1280` presets currently decode to
 of 32. The other presets are aligned. Low presets are useful for bounded tests,
 not evidence of delivery-resolution quality or high-resolution VRAM capacity.
 
+## Create a MiniMax H3 video
+
+The same `POST /v1/videos` endpoint accepts these H3 multipart fields:
+
+| Field | Required | Values |
+|---|---|---|
+| `model` | yes | `minimax-h3` |
+| `prompt` | yes | Nonblank text describing the clip |
+| `frames` | no | Exactly `17k+5` in `124..362`, default `124` |
+| `size` | no | Only `864x480`, also the default |
+| `seed` | no | Unsigned decimal integer `0..18446744073709551615`, default `0`; JavaScript must send an exact decimal string |
+| `input_reference` | no | One PNG/JPEG still for FL8 first-frame image to video |
+| `images` | no | Repeated PNG/JPEG still uploads indexed by metadata in this request |
+| `semantic_references` | no | JSON array of one or two `{"image_index":0}` objects referring to `images` |
+| `temporal_groups` | no | JSON array of one through three `{"frame_index":0,"image_indices":[0,1,2,3,4]}` objects referring to `images` |
+
+Omit conditioning for FL8 text to video. `input_reference` selects FL8 image to
+video and cannot be combined with `images`, semantic references or temporal
+groups. Semantic Picture references select REF20; they preserve declared order
+and are not timeline anchors. Experimental temporal groups also select REF20
+and can coexist with separately indexed semantic references. The two profiles
+retain their fixed 8-step and 20-step recipes respectively; clients cannot
+select alternate samplers, assets or adapters.
+
+Each temporal group contains exactly 1, 5, 22 or 39 stills in `image_indices`
+order, fits entirely within the output frame count, and must not overlap another
+group. `frame_index` is a nonnegative pixel-frame position, not seconds or a
+latent index. Each `images` index must identify a supplied upload and be used
+exactly once across all metadata. Orphans, duplicates, unknown/empty metadata,
+repeated singleton fields and strengths are rejected before upstream work.
+There are at most 119 still uploads. Each must safely decode as PNG/JPEG bytes
+matching its MIME, with at most 32 million pixels each and 64 million pixels
+combined; combined bytes are capped at 32 MiB. Each temporal group's decoded
+dimensions must match after EXIF orientation. Client filenames are discarded
+in favor of generated managed basenames; paths, URLs and arbitrary graphs
+are not accepted.
+
+H3 always outputs 24 FPS. Duration is exactly `frames/24` (the default is
+`124/24`, approximately 5.166667 seconds). Explicit `seconds` is rejected,
+including an explicitly supplied LTX default; H3 never silently maps or rounds
+LTX durations. H3 also rejects WebP, LTX camera/Ingredients/motion controls,
+source-audio guidance, control video, guide strengths, negative/CFG controls
+and custom sampling parameters.
+
+Authenticated `GET /v1/videos/capabilities?model=minimax-h3` describes the
+frame grid, size/seed bounds, typed metadata and upload limits. Each profile
+reports code `supported` separately from native node/curated-asset `available`.
+Discovery is read-only and never loads models, uploads files or submits a
+prompt. Selected-profile schema/asset checks run again before H3 queue
+admission or uploads. These are fixed code-level capability labels:
+`graph_contract_tested`, `gpu_executed:false`, and `visually_reviewed:false`,
+not live per-deployment pilot results. Discovery does not certify execution,
+continuity, identity fidelity or audio/stitch quality.
+See [H3_BASELINE.md](H3_BASELINE.md) for native profile details and the rollout
+gate.
+
 ## Versioned capabilities and timed image guides
 
-Authenticated `GET /v1/videos/capabilities` returns the `video.capabilities`
-object, `schema_version: 1`, model, FPS, accepted durations/sizes, exact seed
+Authenticated `GET /v1/videos/capabilities` defaults to LTX-2.5; an explicit
+`?model=ltx-2.5` selects the same contract and unknown models are rejected.
+The LTX `video.capabilities` object includes `schema_version: 1`, model, FPS, accepted durations/sizes, exact seed
 bounds, adapter bounds, upload limits and guiding-frame support. Runtime
 `guiding_frames.available` requires compatible `LTXVAddGuide` and
 `LTXVCropGuides` input/output schemas. Discovery performs no generation or
@@ -94,7 +154,11 @@ Use an explicitly authorized bounded pilot before scaling. See
 
 ## Adapter discovery and requirements
 
-Authenticated `GET /v1/videos/loras` returns the curated identities, pinned
+Authenticated `GET /v1/videos/loras` defaults to the LTX catalog; explicit
+`?model=ltx-2.5` returns the same contract and unknown models are rejected.
+`?model=minimax-h3` returns `{"object":"list","model":"minimax-h3","data":[]}`
+without probing LTX adapters: H3's curated FL8 adapter is fixed by its recipe.
+The LTX catalog returns the curated identities, pinned
 filenames/revisions/checksums, required input fields, `supported`, `validation`,
 and live backend `installed` state. Installation is not workflow validation.
 Unregistered paths and duplicate IDs are rejected. Installed but unsupported
@@ -143,6 +207,12 @@ The create response is returned as soon as ComfyUI accepts the prompt:
 
 The `video_...` ID carries the ComfyUI prompt ID, so Easel can read status and
 output references from ComfyUI's queue and history after an Easel restart.
+New H3 IDs add optional `:frames` to the encoded-model component, preserving
+the existing receipt and published Media MCP ID character contracts. H3
+creation, polling and queue responses include exact `frames`, `fps:24`, and
+`duration:frames/24`, including after an API restart. Existing LTX IDs and
+response shapes are unchanged. Content retrieval uses the same authenticated
+receipt and performs no replacement submission.
 
 ## Check and download
 

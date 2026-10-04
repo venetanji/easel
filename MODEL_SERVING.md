@@ -1,7 +1,9 @@
 # Model Serving and Queue Admission
 
-The deployed service exposes only `qwen-image-2.1` and `ltx-2.5`. Image requests
-with an omitted/blank model use Qwen; video requests require `ltx-2.5` explicitly.
+This server revision advertises `qwen-image-2.1`, `ltx-2.5`, and `minimax-h3`
+when `COMFY_URL_VIDEO` is configured. Image requests with an omitted/blank model
+use Qwen; video requests require an explicit `ltx-2.5` or `minimax-h3` model.
+This describes code support, not independently verified deployment state.
 `flux2-9b`, `flux2-4b` and `flux-2.5` are not accepted for new generation, editing
 or variation requests. Adapter choices do not create additional base models.
 If `COMFY_URL_VIDEO` is not configured, only Qwen is advertised.
@@ -11,6 +13,23 @@ steps unless a request supplies `steps`. The old global eight-step Flux default
 does not override Qwen's model-specific default. LTX retains its distilled 8+3
 sampling passes and existing video/adapter contracts.
 
+H3 uses native FL8 for text/first-frame image generation and REF20 for semantic
+Picture references or experimental temporal groups. Its output default is
+864x480 with exactly 124 frames at 24 FPS (124/24 seconds); accepted frame counts
+are exactly 17k+5 in 124..362. It accepts the full unsigned 64-bit seed range
+(default 0) without LTX's second-pass increment. Explicit `seconds`, source
+audio and LTX adapter/motion controls are unsupported for H3. H3 multipart
+reference fields and durable timing are documented in [VIDEO_API.md](VIDEO_API.md).
+
+Authenticated `GET /v1/videos/capabilities?model=minimax-h3` reports supported
+profiles separately from read-only native schema/curated-asset availability;
+it does not load models or certify GPU execution or visual quality. Omit
+`model` for existing LTX capabilities; unknown models are rejected. H3
+admission checks the selected runtime profile before queue work or uploads.
+`GET /v1/videos/loras?model=minimax-h3` returns an empty catalog because H3's
+FL8 adapter is fixed by its recipe. See [H3_BASELINE.md](H3_BASELINE.md) for
+profile contracts, offline evidence and the local rollout gate.
+
 ## Backend placement
 
 `COMFY_URL_IMAGE` configures the primary image backend. It takes precedence over
@@ -19,7 +38,7 @@ variable and then the existing primary-backend default. Docker Compose applies
 the same precedence. `COMFY_URL_VIDEO` remains the video backend.
 
 Keep these URLs distinct when backed by different GPUs, allowing Qwen images
-and LTX videos to execute independently rather than paying model-switching costs
+and LTX/H3 videos to execute independently rather than paying model-switching costs
 on one device. The existing `server=video` image override remains compatible;
 it is not required for default image requests.
 
@@ -45,6 +64,8 @@ Continue using ComfyUI's FIFO queue and the existing async receipt contracts:
   synchronous `COMFY_MAX_INFLIGHT` slot; the cache worker observes and saves
   terminal output after client disconnect.
 - Video submission returns its accepted ID without waiting for sampling.
+  New H3 receipts also preserve exact `frames`, `fps`, and `duration` across
+  API restarts in their existing encoded job ID; legacy video IDs remain valid.
 - Admission checks include running/pending external ComfyUI jobs. At eight
   upstream jobs, new admission returns HTTP 429 with `Retry-After`. Async image
   reservations retain their existing SQLite-backed limit as well.
