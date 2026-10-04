@@ -30,6 +30,8 @@ from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
 from .video_graph import VIDEO_MODEL_ID, parse_video_size, text_to_video
 from .video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id
+from .video_controls import (guiding_nodes_available, parse_guiding_frames,
+                             validate_video_form, validate_video_uploads, video_capabilities)
 from .video_loras import VIDEO_LORAS, VideoLoRAError, installed_lora_names, parse_video_loras
 
 MAX_N = 4
@@ -469,6 +471,20 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
             for entry in VIDEO_LORAS.values()
         ]}
 
+    @app.get("/v1/videos/capabilities")
+    async def get_video_capabilities(request: Request):
+        require_auth(settings, request)
+        resolve_server("video", settings)
+        comfy = request.app.state.comfy_video
+        if comfy is None:
+            raise APIError(503, "video server is not available", type="api_error",
+                           code="video_server_unavailable")
+        try:
+            available = await guiding_nodes_available(comfy)
+        except (ComfyError, httpx.HTTPError) as exc:
+            raise APIError(502, str(exc), type="api_error", code="upstream_error")
+        return video_capabilities(guides_available=available)
+
     @app.post("/v1/videos")
     async def create_video(
         request: Request,
@@ -484,9 +500,12 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
         seed: int | None = Form(None),
         lora_reference: FastAPIUploadFile | None = File(default=None),
         lora_reference_strength: float | None = Form(None),
+        guiding_frames: str | None = Form(None),
+        guiding_images: list[FastAPIUploadFile] | None = File(default=None),
     ):
         require_auth(settings, request)
         resolve_server("video", settings)
+        validate_video_form(await request.form())
         prompt = prompt.strip()
         model = model.strip()
         if not prompt:
@@ -508,6 +527,12 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
             selections = parse_video_loras(loras, camera_lora, camera_lora_strength)
         except VideoLoRAError as exc:
             raise APIError(400, str(exc), param=exc.param)
+        guide_uploads = guiding_images or []
+        guides = parse_guiding_frames(guiding_frames, len(guide_uploads), seconds)
+        if guides and (input_reference is not None or lora_reference is not None or
+                       any(entry["id"] == "ingredients" for entry, _ in selections)):
+            raise APIError(400, "guiding_frames cannot be combined with input_reference or ingredients",
+                           param="guiding_frames")
         ingredients = next((selection for selection in selections
                             if selection[0]["id"] == "ingredients"), None)
         if ingredients:
@@ -545,10 +570,23 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
             raise APIError(400, "cinemagraph requires a static camera; moving camera LoRAs conflict",
                            param="loras")
 
+        uploads = [(name, upload) for name, upload in (
+            ("input_reference", input_reference), ("lora_reference", lora_reference)) if upload is not None]
+        uploads.extend(("guiding_images", upload) for upload in guide_uploads)
+        await validate_video_uploads(uploads)
+
         comfy = request.app.state.comfy_video
         if comfy is None:
             raise APIError(503, "video server is not available", type="api_error",
                            code="video_server_unavailable")
+        if guides:
+            try:
+                available = await guiding_nodes_available(comfy)
+            except (ComfyError, httpx.HTTPError) as exc:
+                raise APIError(502, str(exc), type="api_error", code="upstream_error")
+            if not available:
+                raise APIError(503, "ComfyUI lacks compatible guiding-frame nodes", type="api_error",
+                               code="guiding_nodes_unavailable", param="guiding_frames")
         if selections:
             try:
                 installed = installed_lora_names(await comfy.object_info("LoraLoaderModelOnly"))
@@ -605,6 +643,14 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
                 except (ComfyError, httpx.HTTPError) as exc:
                     raise APIError(502, str(exc), type="api_error", code="upstream_upload_error")
                 reference_name = f"{subfolder}/{name}" if subfolder else name
+            guide_names = []
+            for upload in guide_uploads:
+                try:
+                    name, subfolder = await comfy.upload_image(await upload.read(),
+                        upload_name(upload.filename), upload.content_type)
+                except (ComfyError, httpx.HTTPError) as exc:
+                    raise APIError(502, str(exc), type="api_error", code="upstream_upload_error")
+                guide_names.append(f"{subfolder}/{name}" if subfolder else name)
             prefix = f"easel/videos/{uuid.uuid4().hex}"
             graph = text_to_video(
                 prompt=", ".join([entry["trigger"] for entry, _strength in selections
@@ -621,6 +667,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
                 ic_lora=(ingredients[0]["files"][0]["filename"], ingredients[1]) if ingredients else None,
                 reference_image=reference_name,
                 reference_strength=lora_reference_strength if lora_reference_strength is not None else 1.0,
+                guiding_frames=[(guide_names[guide.image_index], guide.frame_index, guide.strength)
+                                for guide in guides],
             )
             try:
                 prompt_id = await comfy.submit(graph)
