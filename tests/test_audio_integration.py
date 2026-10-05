@@ -49,6 +49,25 @@ def test_deployed_audio_dry_run(deployed_audio, model, prompt):
     assert after.json().get("metrics", {}).get("attempts") == before.json().get("metrics", {}).get("attempts")
 
 
+@pytest.mark.skipif(not os.environ.get("EASEL_AUDIO_SAVED_SONG_ID"),
+                    reason="set EASEL_AUDIO_SAVED_SONG_ID to test an existing saved track without spending credits")
+def test_deployed_saved_audio_range_and_conditional_playback(deployed_audio):
+    song_id = os.environ["EASEL_AUDIO_SAVED_SONG_ID"]
+    path = f"/v1/audio/tracks/{song_id}/content"
+    audio = deployed_audio.get(path)
+    assert audio.status_code == 200
+    assert audio.content and audio.headers["content-type"].startswith("audio/")
+    assert int(audio.headers["content-length"]) == len(audio.content)
+    partial = deployed_audio.get(path, headers={"Range": "bytes=0-31"})
+    assert partial.status_code == 206
+    assert partial.content == audio.content[:32]
+    assert partial.headers["content-range"] == f"bytes 0-31/{len(audio.content)}"
+    for header, validator in (("If-None-Match", "etag"), ("If-Modified-Since", "last-modified")):
+        cached = deployed_audio.get(path, headers={header: audio.headers[validator]})
+        assert cached.status_code == 304
+        assert cached.content == b""
+
+
 @pytest.mark.skipif(os.environ.get("EASEL_AUDIO_GENERATION") != "1",
                     reason="set EASEL_AUDIO_GENERATION=1 to spend credits on one sound generation")
 def test_deployed_sound_generation_and_download(deployed_audio, tmp_path):

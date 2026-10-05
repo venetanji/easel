@@ -1,4 +1,5 @@
 """Audio routes and REST transport against a fake Suno server; no credits spent."""
+import asyncio
 import dataclasses
 import json
 
@@ -230,6 +231,87 @@ async def test_ambiguous_transport_failures_never_retry_generation(audio_client,
     assert len(backend.calls) == 1
 
 
+@pytest.mark.parametrize("status,code", [(429, "browser_queue_full"), (503, "browser_queue_timeout")])
+async def test_browser_backpressure_preserves_retry_header_and_not_started(audio_client, status, code):
+    client, backend = audio_client
+    backend.responses["generate/music"] = httpx.Response(status, headers={"Retry-After": "7"}, json={
+        "error": {"code": code, "message": "Not started", "operation_started": False,
+                  "operations": {"queued": 8}},
+    })
+    response = await client.post("/v1/audio/generations", json={"prompt": "Piano"})
+    assert response.status_code == status
+    assert response.headers["Retry-After"] == "7"
+    assert response.json()["error"]["operation_started"] is False
+    assert response.json()["error"]["operations"]["queued"] == 8
+    assert len(backend.calls) == 1
+
+
+async def test_execution_deadline_preserves_ambiguous_submission_state(audio_client):
+    client, backend = audio_client
+    generation = {"status": "pending", "attempt_id": ATTEMPT_ID}
+    backend.responses["generate/music"] = (504, {"error": {
+        "code": "browser_operation_timeout", "message": "Check status before retrying",
+        "operation_started": True, "generation": generation,
+    }})
+    response = await client.post("/v1/audio/generations", json={"prompt": "Piano"})
+    assert response.status_code == 504
+    assert "Retry-After" not in response.headers
+    assert response.json()["error"]["operation_started"] is True
+    assert response.json()["error"]["generation"] == generation
+    assert len(backend.calls) == 1
+
+
+@pytest.mark.parametrize("method,path,body", [
+    ("POST", "/generations", {"prompt": "Piano"}),
+    ("POST", "/generations/abandon", {"attempt_id": ATTEMPT_ID}),
+    ("GET", f"/tracks/{SONG_ID}", None),
+    ("POST", f"/tracks/{SONG_ID}/download", None),
+])
+async def test_disconnect_cancels_upstream_operation_without_retry(audio_client, method, path, body):
+    client, _backend = audio_client
+    app = client._transport.app
+    started = asyncio.Event()
+    canceled = asyncio.Event()
+    calls = []
+
+    async def slow_backend(request):
+        calls.append(request)
+        started.set()
+        try:
+            await asyncio.Event().wait()
+        finally:
+            canceled.set()
+
+    async with httpx.AsyncClient(transport=httpx.MockTransport(slow_backend)) as upstream:
+        app.state.suno = SunoClient("http://suno", upstream)
+        body_sent = False
+
+        async def receive():
+            nonlocal body_sent
+            if not body_sent:
+                body_sent = True
+                return {"type": "http.request", "body": json.dumps(body).encode() if body else b"",
+                        "more_body": False}
+            await started.wait()
+            return {"type": "http.disconnect"}
+
+        messages = []
+
+        async def send(message):
+            messages.append(message)
+
+        scope = {"type": "http", "asgi": {"version": "3.0"}, "http_version": "1.1",
+                 "method": method, "scheme": "http", "path": "/v1/audio" + path,
+                 "raw_path": ("/v1/audio" + path).encode(), "query_string": b"",
+                 "headers": [(b"content-type", b"application/json")],
+                 "server": ("easel", 80), "client": ("test", 123)}
+        async with asyncio.timeout(2):
+            await app(scope, receive, send)
+        assert canceled.is_set()
+        assert len(calls) == 1
+        assert messages[0]["status"] == 499
+
+
 @pytest.mark.parametrize("upstream", [
     httpx.Response(200, text="not JSON"), httpx.Response(200, json=[]),
     httpx.Response(307, headers={"Location": "http://other/generate"}, json={}),
@@ -277,6 +359,24 @@ async def test_byte_range_requests_and_response_headers_are_forwarded(audio_clie
     assert response.content == b"SAVE"
     assert response.headers["Content-Range"] == "bytes 0-3/11"
     assert backend.calls[-1].headers["Range"] == "bytes=0-3"
+    assert stream.closed
+
+
+@pytest.mark.parametrize("header,value", [
+    ("If-None-Match", '"saved-audio"'),
+    ("If-Modified-Since", "Mon, 05 Oct 2026 14:00:00 GMT"),
+])
+async def test_conditional_audio_requests_preserve_not_modified_and_close_upstream(audio_client, header, value):
+    client, backend = audio_client
+    stream = AudioBytes(b"")
+    backend.responses[f"songs/{SONG_ID}/audio"] = httpx.Response(304, stream=stream, headers={
+        "ETag": '"saved-audio"', "Last-Modified": "Mon, 05 Oct 2026 14:00:00 GMT",
+    })
+    response = await client.get(f"/v1/audio/tracks/{SONG_ID}/content", headers={header: value})
+    assert response.status_code == 304
+    assert response.content == b""
+    assert response.headers["ETag"] == '"saved-audio"'
+    assert backend.calls[-1].headers[header] == value
     assert stream.closed
 
 

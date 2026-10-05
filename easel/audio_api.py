@@ -1,6 +1,7 @@
 """Authenticated audio generation backed by Suno's shared browser session."""
 from __future__ import annotations
 
+import asyncio
 from typing import Literal
 from uuid import UUID
 
@@ -86,6 +87,27 @@ def _suno(request: Request):
     return request.app.state.suno
 
 
+async def _while_connected(request: Request, operation):
+    async def disconnected():
+        while True:
+            if (await request.receive())["type"] == "http.disconnect":
+                return
+
+    watcher = asyncio.create_task(disconnected())
+    worker = asyncio.create_task(operation)
+    try:
+        done, _pending = await asyncio.wait((worker, watcher), return_when=asyncio.FIRST_COMPLETED)
+        if worker in done:
+            return await worker
+        await watcher
+        raise APIError(499, "Caller disconnected; check generation status before retrying",
+                       type="api_error", code="client_disconnected")
+    finally:
+        worker.cancel()
+        watcher.cancel()
+        await asyncio.gather(worker, watcher, return_exceptions=True)
+
+
 def _track_urls(data: dict, request: Request) -> dict:
     result = {key: value for key, value in data.items() if key not in {"path", "stream_url", "audio_url"}}
     song_id = data.get("id") or data.get("song_id")
@@ -129,7 +151,7 @@ def register_audio_routes(app, require_auth) -> None:
             payload["script"] = payload.pop("prompt")
         else:
             kind = "sound"
-        data, status = await suno.request("POST", f"generate/{kind}", json=payload)
+        data, status = await _while_connected(request, suno.request("POST", f"generate/{kind}", json=payload))
         result = {**_generation(data, request), "model": body.model}
         headers = {"Location": result["status_url"], "Retry-After": "5"} if status == 202 else None
         return JSONResponse(result, status_code=status, headers=headers)
@@ -141,19 +163,19 @@ def register_audio_routes(app, require_auth) -> None:
 
     @router.post("/generations/abandon")
     async def abandon(request: Request, body: AbandonGeneration):
-        data, status = await _suno(request).request(
+        data, status = await _while_connected(request, _suno(request).request(
             "POST", "generation/abandon", json=body.model_dump(mode="json"),
-        )
+        ))
         return JSONResponse(_generation(data, request), status_code=status)
 
     @router.get("/tracks/{song_id}")
     async def track(request: Request, song_id: UUID):
-        data, _status = await _suno(request).request("GET", f"songs/{song_id}")
+        data, _status = await _while_connected(request, _suno(request).request("GET", f"songs/{song_id}"))
         return _track_urls(data, request)
 
     @router.post("/tracks/{song_id}/download")
     async def download_track(request: Request, song_id: UUID):
-        data, status = await _suno(request).request("POST", f"songs/{song_id}/download")
+        data, status = await _while_connected(request, _suno(request).request("POST", f"songs/{song_id}/download"))
         return JSONResponse(_track_urls(data, request), status_code=status)
 
     @router.get("/tracks/{song_id}/content")

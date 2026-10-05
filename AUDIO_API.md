@@ -66,6 +66,20 @@ while an unconfirmed submission/CAPTCHA is pending with HTTP 409; Easel preserve
 the actionable `error.generation` details. Accepted tracks may continue generating
 while the browser accepts a later request. Image/video admission is independent.
 
+Browser actions are sequential across Easel, direct Suno REST, and MCP: one
+active operation, up to eight FIFO waiters by default, a 15-second queue wait,
+and a 120-second execution deadline. Suno's `SUNO_BROWSER_QUEUE_CAPACITY`,
+`SUNO_BROWSER_QUEUE_TIMEOUT`, and `SUNO_BROWSER_OPERATION_TIMEOUT` tune these
+limits. Keep Easel's `SUNO_TIMEOUT` (default 180 seconds) above queue wait plus
+execution time. Status polling and saved audio streaming bypass this queue.
+Generation status includes queue diagnostics under `operations`.
+
+Easel preserves 429 queue-full and 503 queue-wait errors, `Retry-After`, and
+`error.operation_started: false`; back off rather than immediately retrying.
+Execution timeouts return 504 with ambiguous-submission warnings. When a caller
+disconnects, Easel cancels its upstream request, allowing Suno to remove queued
+work before a late Create. Cancellation cannot reverse an accepted generation.
+
 Neither generation POSTs nor ambiguous requests are automatically retried.
 After a timeout, disconnect or upstream error, inspect status and your Suno library
 before deciding to submit again; generation might already have consumed credits.
@@ -99,3 +113,6 @@ streaming and existing application lifecycle behavior with a fake REST server.
 configured. By default it only prepares forms without spending credits. The
 additional `EASEL_AUDIO_GENERATION=1` flag enables one real sound generation and
 download; CAPTCHA requirements are reported rather than automatically retried.
+Set `EASEL_AUDIO_SAVED_SONG_ID` to an existing saved track ID to also verify
+authenticated streaming, byte ranges, and conditional 304 responses without
+submitting a generation or downloading another track from Suno.

@@ -33,9 +33,11 @@ class SunoClient:
             status = 400
         elif status not in (400, 404, 409, 413, 416, 429, 503, 504):
             status = 502
+        retry_after = response.headers.get("Retry-After", "")
+        retry_seconds = int(retry_after) if retry_after.isdigit() else None
         raise APIError(
             status, message, type="invalid_request_error" if status < 500 else "api_error",
-            code=code, retry_after=5 if status == 429 else None,
+            code=code, retry_after=(retry_seconds if retry_seconds is not None else 5) if status in (429, 503) else None,
             details={key: value for key, value in detail.items() if key not in {"code", "message"}},
         )
 
