@@ -66,10 +66,12 @@ def reference_edit(*, unet_name, clip_name, vae_name, image_filenames, prompt, w
 
     g = WorkflowGraph()
     unet, clip, vae = _load_models(g, unet_name, clip_name, vae_name)
-    encoded_inputs = {
-        f"images.image_{index}": g.node("LoadImage", image=filename)[0]
-        for index, filename in enumerate(image_filenames, start=1)
-    }
+    encoded_inputs = {}
+    for index, filename in enumerate(image_filenames, start=1):
+        loaded = g.node("LoadImage", image=filename)
+        # LoadImage separates RGB and inverse alpha; rejoin them for Qwen's RGBA VAE.
+        rgba = g.node("JoinImageWithAlpha", image=loaded[0], alpha=loaded[1])
+        encoded_inputs[f"images.image_{index}"] = rgba[0]
     resolution = max(width, height) if width is not None and height is not None else 1024
     resolution = max(32, int(resolution / 32 + 0.5) * 32)
     encoded = g.node(
