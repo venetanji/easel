@@ -4,6 +4,22 @@ Easel keeps HTTP/authentication, queue admission, receipts and request validatio
 separate from its Python ComfyUI graph builders. JavaScript/CLI consumers use the
 same HTTP contract. They do not need a port of the graph builder.
 
+## Licensing and maintainer confirmation
+
+On 5 October 2026 the maintainer confirmed that Comfy Graph recipes derive from
+official ComfyUI documentation and GitHub workflows, and that the Python
+generator is their own GPL code. Easel-owned generators are now explicitly
+GPL-3.0-or-later. This resolves the earlier ownership question; it does not
+assert a line-by-line map for unpublished historical recipes or change the
+technical compatibility boundaries below.
+
+The creative-skills portions retain their original MIT grant. Official
+`Comfy-Org/workflow_templates` at the pinned revision in H3_BASELINE.md is MIT;
+ComfyUI source/blueprints retain their upstream GPLv3 terms. Full notices are
+preserved in [NOTICE](NOTICE) and `licenses/`, including for copyrightable
+copied schema descriptions in the offline fixtures. The own-code "or later"
+grant does not amend ComfyUI's grant. Model assets retain separate terms.
+
 ## What is inherited
 
 `flux_graph.py` explicitly documents vendoring from creative-skills' Flux2
@@ -63,6 +79,6 @@ visual quality. Credentials, media uploads and job persistence stay with Easel.
 
 `easel/h3_graph.py` adapts the unpublished October 2 H3 prototype into Easel's
 graph helper, with independent recipe fixtures and a captured native runtime
-schema. It is not wired into the HTTP API yet. Temporal guidance is graph-only
-evidence, not a completed continuity pilot. See [H3_BASELINE.md](H3_BASELINE.md)
+schema. Bounded HTTP integration is present. Temporal guidance has offline
+graph-contract evidence, not a completed continuity pilot. See [H3_BASELINE.md](H3_BASELINE.md)
 for pinned ComfyUI/model/workflow pointers and cloud implementation gates.

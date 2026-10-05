@@ -1,3 +1,5 @@
+# Easel-owned generator: GPL-3.0-or-later. Official workflow/source terms
+# remain applicable to upstream material; see NOTICE and H3_BASELINE.md.
 """Offline H3 graph baseline; HTTP registration and media admission are separate."""
 from __future__ import annotations
 
