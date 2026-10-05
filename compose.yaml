@@ -15,6 +15,9 @@ services:
       EASEL_PROMPT_SEPARATOR: ${EASEL_PROMPT_SEPARATOR:-|||}
       EASEL_VARIATION_PROMPT: ${EASEL_VARIATION_PROMPT:-recreate this image, same composition and style}
       EASEL_JOB_DIR: /app/jobs
+      SUNO_URL: ${SUNO_URL:-}
+      SUNO_REST_API_TOKEN: ${SUNO_REST_API_TOKEN:-}
+      SUNO_TIMEOUT: ${SUNO_TIMEOUT:-180}
     volumes:
       - image-jobs:/app/jobs
     ports:

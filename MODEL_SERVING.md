@@ -6,7 +6,10 @@ use Qwen; video requests require an explicit `ltx-2.5` or `minimax-h3` model.
 This describes code support, not independently verified deployment state.
 `flux2-9b`, `flux2-4b` and `flux-2.5` are not accepted for new generation, editing
 or variation requests. Adapter choices do not create additional base models.
-If `COMFY_URL_VIDEO` is not configured, only Qwen is advertised.
+If `COMFY_URL_VIDEO` is not configured, Qwen is the only ComfyUI model advertised.
+Setting `SUNO_URL` independently adds `suno-music`, `suno-speech`, and `suno-sound`.
+These audio routing IDs use the separate Suno REST/browser backend, not ComfyUI;
+see [AUDIO_API.md](AUDIO_API.md) for options, status polling and saved audio.
 
 Qwen uses its matching INT8 transformer/text encoder, BF16 VAE and 25 sampling
 steps unless a request supplies `steps`. The old global eight-step Flux default

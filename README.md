@@ -1,8 +1,9 @@
 # Easel
 
 An OpenAI-compatible image and video API gateway for a separately operated
-[ComfyUI](https://github.com/Comfy-Org/ComfyUI) service. Python graph builders,
-authenticated admission, managed uploads and durable job receipts live here.
+[ComfyUI](https://github.com/Comfy-Org/ComfyUI) service, with audio generation
+through a separately operated Suno MCP/REST service. Python graph builders,
+authenticated admission, managed uploads and durable image job receipts live here.
 
 ## Develop and run
 
@@ -22,6 +23,7 @@ out of version control. API and model setup details:
 - [Image jobs](IMAGE_JOBS.md)
 - [Video API](VIDEO_API.md) and [video LoRAs](VIDEO_LORAS.md)
 - [Model serving](MODEL_SERVING.md)
+- [Audio API](AUDIO_API.md)
 - [Graph provenance](GRAPH_PROVENANCE.md) and [H3 baseline](H3_BASELINE.md)
 
 Tests use fake backends by default and do not submit GPU jobs:

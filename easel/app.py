@@ -1,4 +1,4 @@
-"""FastAPI app: OpenAI-compatible image and video endpoints backed by ComfyUI."""
+"""FastAPI app: image/video endpoints backed by ComfyUI and audio backed by Suno."""
 from __future__ import annotations
 
 import asyncio
@@ -26,6 +26,8 @@ from .comfy_client import (
 from .config import MODELS, ModelSpec, Settings, UnknownModelError, parse_size, resolve_model
 from .errors import APIError, error_response
 from .image_jobs import ImageJobs, wants_async
+from .audio_api import AUDIO_MODELS, register_audio_routes
+from .suno_client import SunoClient
 from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
 from .video_graph import VIDEO_MODEL_ID, parse_video_size, text_to_video
@@ -382,7 +384,7 @@ def build_edit_graph(spec: ModelSpec, *, image_filenames, prompt, width, height,
 
 # ---- app factory ----
 
-def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -> FastAPI:
+def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, suno=None) -> FastAPI:
     settings = settings or Settings.from_env()
     shared_backend = bool(settings.comfy_video_url) and (
         settings.comfy_url.rstrip("/") == settings.comfy_video_url.rstrip("/")
@@ -392,13 +394,17 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         http = None
-        if comfy is None or (settings.comfy_video_url and comfy_video is None):
+        if (comfy is None or (settings.comfy_video_url and comfy_video is None)
+                or (settings.suno_url and suno is None)):
             http = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=180.0))
             if comfy is None:
                 app.state.comfy = ComfyClient(settings.comfy_url, http)
             if settings.comfy_video_url and comfy_video is None:
                 app.state.comfy_video = app.state.comfy if shared_backend else \
                     ComfyClient(settings.comfy_video_url, http)
+            if settings.suno_url and suno is None:
+                app.state.suno = SunoClient(settings.suno_url, http, token=settings.suno_api_token,
+                                           timeout=settings.suno_timeout)
         app.state.image_jobs.backends = {"image": app.state.comfy, "video": app.state.comfy_video}
         watcher = asyncio.create_task(app.state.image_jobs.watch())
         try:
@@ -423,7 +429,9 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
     app.state.video_started_at = {}
     app.state.comfy = comfy
     app.state.comfy_video = comfy_video
+    app.state.suno = suno
     app.state.image_jobs = ImageJobs(settings.image_job_dir, {"image": comfy, "video": comfy_video})
+    register_audio_routes(app, require_auth)
 
     @app.exception_handler(APIError)
     async def _handle_api_error(request: Request, exc: APIError):
@@ -450,6 +458,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None) -
         model_ids = [*MODELS]
         if settings.comfy_video_url:
             model_ids.extend([VIDEO_MODEL_ID, h3_graph.VIDEO_MODEL_ID])
+        if settings.suno_url:
+            model_ids.extend(AUDIO_MODELS)
         return {"object": "list", "data": [
             {"id": m, "object": "model", "created": created, "owned_by": "easel"}
             for m in model_ids

@@ -76,6 +76,18 @@ def test_settings_defaults():
     assert s.default_steps == 25
     assert s.variation_prompt
     assert s.prompt_separator == "|||"
+    assert s.suno_url is None
+    assert s.suno_api_token is None
+    assert s.suno_timeout == 180
+
+
+def test_suno_settings_are_optional_and_strip_blank_values():
+    settings = Settings.from_env({"SUNO_URL": "  http://audio:8085/ ",
+                                  "SUNO_REST_API_TOKEN": " secret ", "SUNO_TIMEOUT": "90"})
+    assert settings.suno_url == "http://audio:8085/"
+    assert settings.suno_api_token == "secret"
+    assert settings.suno_timeout == 90
+    assert Settings.from_env({"SUNO_URL": " ", "SUNO_REST_API_TOKEN": " "}).suno_url is None
 
 
 def test_settings_from_env_overrides():

@@ -93,6 +93,9 @@ class Settings:
     variation_prompt: str
     prompt_separator: str
     image_job_dir: str = str(Path.home() / ".local/share/easel/jobs")
+    suno_url: str | None = None
+    suno_api_token: str | None = None
+    suno_timeout: float = 180.0
 
     @classmethod
     def from_env(cls, env: dict | None = None) -> "Settings":
@@ -111,4 +114,7 @@ class Settings:
             ),
             prompt_separator=env.get("EASEL_PROMPT_SEPARATOR", "|||"),
             image_job_dir=_clean(env.get("EASEL_JOB_DIR")) or cls.image_job_dir,
+            suno_url=_clean(env.get("SUNO_URL")),
+            suno_api_token=_clean(env.get("SUNO_REST_API_TOKEN")),
+            suno_timeout=float(env.get("SUNO_TIMEOUT", "180")),
         )

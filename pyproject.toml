@@ -1,7 +1,7 @@
 [project]
 name = "easel"
 version = "0.1.0"
-description = "OpenAI-compatible image and video API gateway for ComfyUI"
+description = "Image, video, and audio API gateway for ComfyUI and Suno"
 readme = "README.md"
 license = "GPL-3.0-or-later"
 license-files = ["LICENSE", "NOTICE", "licenses/*.txt"]
