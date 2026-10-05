@@ -13,6 +13,15 @@ steps unless a request supplies `steps`. The old global eight-step Flux default
 does not override Qwen's model-specific default. LTX retains its distilled 8+3
 sampling passes and existing video/adapter contracts.
 
+Qwen edits and variations preserve reference alpha by rejoining `LoadImage`'s
+RGB and mask outputs with the standard ComfyUI `JoinImageWithAlpha` node before
+`TextEncodeQwenImage21`. The join node handles the inverse-alpha mask convention;
+opaque references retain an alpha of one. The Qwen node composites RGBA over
+white for vision conditioning and retains all four channels for its VAE input.
+The image backend must include `JoinImageWithAlpha`. This preserves reference
+conditioning, not an exact output mask: transparent output still depends on the
+prompt and must be verified in the generated PNG.
+
 H3 uses native FL8 for text/first-frame image generation and REF20 for semantic
 Picture references or experimental temporal groups. Its output default is
 864x480 with exactly 124 frames at 24 FPS (124/24 seconds); accepted frame counts

@@ -374,8 +374,11 @@ def test_qwen_image_21_edits_use_encoder_reference_inputs_and_latent():
     graph = fake.submitted_graph
     encoder = _nodes(graph, "TextEncodeQwenImage21")[0]
     load_ids = [key for key, node in graph.items() if node["class_type"] == "LoadImage"]
-    assert encoder["inputs"]["images.image_1"] == [load_ids[0], 0]
-    assert encoder["inputs"]["images.image_2"] == [load_ids[1], 0]
+    for index, load_id in enumerate(load_ids, start=1):
+        rgba_id, output_slot = encoder["inputs"][f"images.image_{index}"]
+        assert output_slot == 0
+        assert graph[rgba_id] == {"class_type": "JoinImageWithAlpha",
+                                  "inputs": {"image": [load_id, 0], "alpha": [load_id, 1]}}
     assert encoder["inputs"]["resolution"] == 1024
     assert len(_nodes(graph, "LoadImage")) == 2
     encoder_id = next(k for k, v in graph.items() if v["class_type"] == "TextEncodeQwenImage21")
@@ -392,8 +395,13 @@ def test_qwen_image_21_variations_use_reference_encoder():
     r = client.post("/v1/images/variations", data={"model": "qwen-image-2.1"},
                     files={"image": ("a.png", b"A", "image/png")})
     assert r.status_code == 200
-    assert _nodes(fake.submitted_graph, "TextEncodeQwenImage21")
-    assert _nodes(fake.submitted_graph, "LoadImage")
+    graph = fake.submitted_graph
+    encoder = _nodes(graph, "TextEncodeQwenImage21")[0]
+    rgba_id, output_slot = encoder["inputs"]["images.image_1"]
+    assert output_slot == 0
+    load_id = next(key for key, node in graph.items() if node["class_type"] == "LoadImage")
+    assert graph[rgba_id] == {"class_type": "JoinImageWithAlpha",
+                              "inputs": {"image": [load_id, 0], "alpha": [load_id, 1]}}
 
 
 def test_qwen_image_21_edits_reject_more_than_16_reference_images():
