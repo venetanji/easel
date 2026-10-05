@@ -1,15 +1,18 @@
 """Integration tests against a real ComfyUI Qwen Image 2.1 server.
 
 Opt-in: set EASEL_INTEGRATION=1 and COMFY_URL_IMAGE to a reachable server.
+Set EASEL_INTEGRATION_URL to test a deployed Easel instead of an in-process app;
+set EASEL_API_KEY if that deployment requires authentication.
 Uses an explicit low step count to bound protocol smoke tests.
 """
 import dataclasses
 import io
 import os
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
-from PIL import Image
+from PIL import Image, ImageDraw
 
 from easel.app import create_app
 from easel.config import Settings
@@ -35,6 +38,13 @@ def _settings():
 
 @pytest.fixture()
 def client():
+    base_url = os.environ.get("EASEL_INTEGRATION_URL")
+    if base_url:
+        api_key = os.environ.get("EASEL_API_KEY")
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        with httpx.Client(base_url=base_url, headers=headers, timeout=600) as deployed:
+            yield deployed
+        return
     with TestClient(create_app(settings=_settings())) as c:
         yield c
 
@@ -43,6 +53,19 @@ def _red_png(size=(512, 512)) -> bytes:
     buf = io.BytesIO()
     Image.new("RGB", size, (200, 30, 30)).save(buf, format="PNG")
     return buf.getvalue()
+
+
+def _transparent_png(mode="RGBA") -> bytes:
+    image = Image.new("RGBA", (512, 512), (10, 70, 140, 0))
+    drawing = ImageDraw.Draw(image)
+    drawing.ellipse((112, 304, 400, 432), fill=(200, 30, 30, 128))
+    drawing.ellipse((128, 96, 384, 352), fill=(200, 30, 30, 255))
+    if mode == "P":
+        image = image.quantize(colors=8, dither=Image.Dither.NONE)
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    assert image.convert("RGBA").getchannel("A").getextrema() == (0, 255)
+    return buffer.getvalue()
 
 
 def _decode(b64: str) -> Image.Image:
@@ -111,3 +134,39 @@ def test_image_variation(client):
     img = _decode(r.json()["data"][0]["b64_json"])
     assert img.format == "PNG"
     assert img.size == (512, 512)
+
+
+@pytest.mark.parametrize("mode", ["RGBA", "P"])
+@pytest.mark.parametrize("endpoint", ["edits", "variations"])
+def test_transparent_png_reference(client, endpoint, mode):
+    response = client.post(
+        f"/v1/images/{endpoint}",
+        data={"model": MODEL, "prompt": "a red apple, keep the background transparent",
+              "size": SIZE, "steps": str(STEPS), "seed": "42"},
+        files={"image": (f"transparent-{mode}.png", _transparent_png(mode), "image/png")},
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert len(data) == 1
+    image = _decode(data[0]["b64_json"])
+    assert image.format == "PNG"
+    assert image.mode == "RGBA"
+    assert image.size == (512, 512)
+
+
+def test_transparent_png_multi_reference_batch(client):
+    response = client.post(
+        "/v1/images/edits",
+        data={"model": MODEL, "prompt": "a red apple, keep the background transparent",
+              "size": SIZE, "steps": str(STEPS), "seed": "42", "n": "2"},
+        files=[("image[]", (f"transparent-{mode}.png", _transparent_png(mode), "image/png"))
+               for mode in ("RGBA", "P")],
+    )
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert len(data) == 2
+    for item in data:
+        image = _decode(item["b64_json"])
+        assert image.format == "PNG"
+        assert image.mode == "RGBA"
+        assert image.size == (512, 512)
