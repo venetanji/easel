@@ -1,3 +1,5 @@
+# Adapted from creative-skills; original MIT grant is retained in
+# licenses/creative-skills-MIT.txt. See NOTICE for scope and modifications.
 """Flux.2 Klein ComfyUI graph builders (vendored).
 
 Self-contained so nothing imports the creative-skills tree at runtime (that tree

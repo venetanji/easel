@@ -1,0 +1,94 @@
+Easel
+Copyright (c) 2026 Venetanji
+
+Easel-owned code, including the maintainer's Python graph generators, is
+licensed under GPL-3.0-or-later:
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program in LICENSE. If not, see https://www.gnu.org/licenses/.
+
+Scope and retained upstream terms
+--------------------------------
+The project SPDX metadata describes the Easel-owned code grant above.
+It does not replace third-party grants, extend upstream permissions, revoke
+earlier MIT grants, or declare that all files share one copyright owner.
+
+1. creative-skills Flux/helper code
+
+   easel/flux_graph.py and easel/workflow_graph.py are vendored/adapted from
+   comfyui/scripts/flux2.py and core.py in venetanji/creative-skills.
+   Retained upstream grant: MIT, Copyright (c) 2026 Venetanji.
+   Full text: licenses/creative-skills-MIT.txt.
+   Inspected source and license:
+   https://github.com/venetanji/creative-skills/tree/67f185c8f95182690e1ac56e734aa649f71b4df6/comfyui/scripts
+   https://github.com/venetanji/creative-skills/blob/67f185c8f95182690e1ac56e734aa649f71b4df6/LICENSE
+   Easel modifications, present by 5 October 2026, include extracting the
+   WorkflowGraph helper, node numbering/link adaptation, and server-specific
+   inputs/validation. Existing MIT permissions on the upstream portions remain.
+
+2. Official Comfy workflow templates
+
+   The maintainer confirmed on 5 October 2026 that Comfy Graph recipes derive
+   from official ComfyUI documentation and GitHub workflows, and that the Python
+   generator is their own GPL code. Official H3 recipe references include:
+   https://github.com/Comfy-Org/workflow_templates/blob/0e5c5efb32ba6f3365d6da07da64aaf668157042/templates/video_minimax_h3_multiframe_reference.json
+   https://github.com/Comfy-Org/workflow_templates/blob/0e5c5efb32ba6f3365d6da07da64aaf668157042/templates/video_minimax_h3_r2v.json
+   Retained upstream grant: MIT, Copyright (c) 2023-present Comfy Org.
+   Full text: licenses/comfy-workflow-templates-MIT.txt.
+   License source:
+   https://github.com/Comfy-Org/workflow_templates/blob/0e5c5efb32ba6f3365d6da07da64aaf668157042/LICENSE
+   These are source references, not a claim that local API-format prototype
+   fixtures are byte-identical to those UI workflows. Easel's adaptation adds
+   its own graph builder, bounded inputs and API integration (October 2026).
+
+3. ComfyUI source, blueprints and captured runtime schemas
+
+   Upstream ComfyUI contributors retain their rights. The inspected ComfyUI
+   license is GPL version 3, preserved verbatim in licenses/ComfyUI-GPL-3.0.txt:
+   https://github.com/Comfy-Org/ComfyUI/blob/b5cc8830279eae909a59de030af1e50761c36751/LICENSE
+   https://github.com/Comfy-Org/ComfyUI/blob/e9027f2b30f37bb3052714eb08fcf479542f4fc0/LICENSE
+   Easel's own-code "or later" grant does not amend ComfyUI's upstream terms.
+   This notice makes no separate conclusion about upstream later-version
+   permissions or the copyrightability of node names, interfaces or schemas.
+
+   tests/fixtures/h3/runtime_nodes.json records a filtered runtime schema
+   capture from b5cc8830279eae909a59de030af1e50761c36751 on 4 October 2026.
+   Easel changes: H3-only asset chooser values and synthetic LoadImage names;
+   retain upstream terms for any copyrightable copied schema descriptions.
+   The H3 generator and tests/fixtures/h3/h3_*_prototype.json use official
+   workflow-derived recipes; applicable upstream terms remain on those parts.
+   Relevant H3 source: comfy_extras/nodes_minimax_h3.py and the MiniMax H3
+   image-to-video blueprint at that revision. The LTX generator references
+   comfy_extras/nodes_lt.py and the LTX-2.5 first/last-frame blueprint at
+   e9027f2b30f37bb3052714eb08fcf479542f4fc0. See GRAPH_PROVENANCE.md and
+   H3_BASELINE.md in the source repository for exact source links, independent
+   fixture provenance, adaptations and runtime-verification boundaries.
+
+4. Independent dependencies, services and model assets
+
+   Python dependencies and container/base-image components retain their own
+   licenses. ComfyUI runs as a separate HTTP service and is not bundled by
+   this repository's Dockerfile. The application GPL grant does not relicense
+   that service or its dependencies.
+
+   Model weights, LoRAs, encoders, VAEs, datasets and generated media are not
+   licensed by this application notice. No model weights are bundled here.
+   Downloading or using them requires review of the relevant asset terms;
+   permission for the gateway code is not permission for every referenced asset.
+
+Provenance limits
+-----------------
+The owner confirmation resolves ownership of the Python generator. It is not
+proof of a line-by-line map of every historic unpublished recipe to one official
+file. The published creative-skills LTX runtime at the revision above is LTX-2.3;
+it does not establish import of the unpublished canonical LTX-2.5 implementation.
+Do not erase upstream notices or infer an expanded grant from these limitations.

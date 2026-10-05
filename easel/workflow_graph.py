@@ -1,3 +1,5 @@
+# Adapted from creative-skills; original MIT grant is retained in
+# licenses/creative-skills-MIT.txt. See NOTICE for scope and modifications.
 """Minimal builder for ComfyUI API-format prompt graphs."""
 
 

@@ -1,3 +1,5 @@
+# Easel-owned generator: GPL-3.0-or-later. Official workflow/source terms
+# remain applicable to upstream material; see NOTICE and GRAPH_PROVENANCE.md.
 """LTX-2.5 text-to-video and image-to-video ComfyUI graphs."""
 from __future__ import annotations
 

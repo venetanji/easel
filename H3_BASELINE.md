@@ -7,6 +7,21 @@ selected H3 graph before queue admission or uploads. The local owner reviews,
 pilots, and deploys these changes; GPU execution and visual review remain
 rollout gates.
 
+## Licensing clarification (5 October 2026)
+
+The maintainer confirmed that the Comfy Graph recipes derive from official
+ComfyUI documentation and GitHub workflows, and that the Python generator is
+their own GPL code. Easel-owned generator code is GPL-3.0-or-later. The recipe
+and runtime pointers below remain provenance evidence, without a claim that
+the unpublished prototypes are byte-identical to any one upstream workflow.
+
+The pinned `workflow_templates` grant is MIT, copyright 2023-present Comfy Org.
+ComfyUI source/blueprints and any copyrightable copied runtime-schema text keep
+their upstream GPLv3 terms; Easel's "or later" grant does not expand them.
+The schema fixture records its 4 October 2026 capture and filters. See
+[NOTICE](NOTICE), `licenses/`, and the [audit](docs/license-audit.md) for the
+preserved texts and scope. Model-specific licenses are separate from code.
+
 ## Available code and fixtures
 
 `easel/h3_graph.py` ports the previously explored, unpublished Comfy Graph
