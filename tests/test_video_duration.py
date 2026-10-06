@@ -37,7 +37,7 @@ def video_api():
 
 
 def _create_video(client, seconds=None, with_reference=False):
-    data = {"model": "ltx-2.5", "prompt": "a red ball rolling on a table"}
+    data = {"model": "ltx-2.5", "prompt": "a red ball rolling on a table", "size": "512x320"}
     if seconds is not None:
         data["seconds"] = str(seconds)
     files = None

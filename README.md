@@ -22,6 +22,7 @@ out of version control. API and model setup details:
 
 - [Image jobs](IMAGE_JOBS.md)
 - [Video API](VIDEO_API.md) and [video LoRAs](VIDEO_LORAS.md)
+- [Video sizing, resource limits and opt-in GPU benchmarks](VIDEO_SIZING.md)
 - [Model serving](MODEL_SERVING.md)
 - [Audio API](AUDIO_API.md)
 - [Graph provenance](GRAPH_PROVENANCE.md) and [H3 baseline](H3_BASELINE.md)

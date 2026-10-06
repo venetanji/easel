@@ -177,6 +177,20 @@ class ComfyClient:
         return refs
 
     @staticmethod
+    def is_out_of_memory(status: dict) -> bool:
+        for message in status.get("messages", []):
+            if not isinstance(message, list) or len(message) != 2 or message[0] != "execution_error":
+                continue
+            data = message[1] if isinstance(message[1], dict) else {}
+            exception_type = str(data.get("exception_type", "")).rsplit(".", 1)[-1]
+            text = str(data.get("exception_message", "")).lower()
+            if exception_type == "OutOfMemoryError" or any(
+                marker in text for marker in ("out of memory", "allocation on device", "cudaerrormemoryallocation", "cuda oom")
+            ):
+                return True
+        return False
+
+    @staticmethod
     def _extract_error(status: dict) -> tuple[str | None, str]:
         for m in status.get("messages", []):
             if isinstance(m, list) and len(m) == 2 and m[0] == "execution_error":

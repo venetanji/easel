@@ -2,11 +2,13 @@
 import dataclasses
 import time
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from easel.app import create_app
 from easel.config import Settings
-from easel.video_jobs import VIDEO_TTL_SECONDS, make_video_id
+from easel.video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id
 from tests.test_image_jobs import QueuedComfy
 
 
@@ -90,3 +92,47 @@ def test_terminal_failure_ignores_stale_running_queue_snapshot(tmp_path):
     assert body["queue_position"] is None
     assert body["estimated_wait_seconds"] is None
     assert body["estimated_completion_at"] is None
+
+
+@pytest.mark.parametrize("exception_type, message", [
+    ("torch.OutOfMemoryError", "allocation failed"),
+    ("torch.cuda.OutOfMemoryError", ""),
+    ("RuntimeError", "CUDA out of memory. Tried to allocate 1 GiB"),
+    ("RuntimeError", "Allocation on device"),
+    ("RuntimeError", "CUDA OOM"),
+])
+def test_oom_is_actionable_and_does_not_resubmit_or_block_other_jobs(tmp_path, exception_type, message):
+    client, video = build(tmp_path)
+    failed_id = make_video_id("oom-prompt-id", "ltx-2.5", frames=97, size=(1024, 1024))
+    video.histories["oom-prompt-id"] = {
+        "status": {"status_str": "error", "messages": [["execution_error", {
+            "exception_type": exception_type, "exception_message": message,
+        }]]}, "outputs": {},
+    }
+    for route in ("/v1/videos/", "/v1/videos/queue/"):
+        failed = client.get(route + failed_id).json()
+        assert failed["status"] == "failed"
+        assert failed["error"]["code"] == "upstream_out_of_memory"
+        assert failed["error"]["retryable"] is False
+        assert failed["error"]["suggested_action"] == "reduce_size_or_duration"
+    assert video.submissions == []
+    receipt = client.post("/v1/videos", data={"model": "ltx-2.5", "prompt": "explicit smaller recovery job",
+                                           "size": "512x512", "seconds": "1"})
+    assert receipt.status_code == 200 and len(video.submissions) == 1
+    recovered_id = receipt.json()["id"]
+    prompt_id = parse_video_id(recovered_id)[2]
+    video.finish(prompt_id)
+    video.histories[prompt_id]["outputs"] = {"save": {"videos": [{"filename": "recovered.mp4"}]}}
+    assert client.get("/v1/videos/" + recovered_id).json()["status"] == "completed"
+
+
+def test_non_memory_failure_keeps_generic_error_code(tmp_path):
+    client, video = build(tmp_path)
+    video_id = make_video_id("invalid-prompt-id", "ltx-2.5")
+    video.histories["invalid-prompt-id"] = {
+        "status": {"status_str": "error", "messages": [["execution_error", {
+            "exception_type": "RuntimeError", "exception_message": "tensor dimensions do not match",
+        }]]}, "outputs": {},
+    }
+    body = client.get("/v1/videos/" + video_id).json()
+    assert body["status"] == "failed" and body["error"]["code"] == "upstream_execution_error"

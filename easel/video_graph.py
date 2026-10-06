@@ -6,16 +6,7 @@ from __future__ import annotations
 import time
 
 from .workflow_graph import WorkflowGraph
-
-VIDEO_SIZES = {
-    "512x320": (512, 320),
-    "640x384": (640, 384),
-    "768x512": (768, 512),
-    "1280x720": (1280, 720),
-    "720x1280": (720, 1280),
-    "1792x1024": (1792, 1024),
-    "1024x1792": (1024, 1792),
-}
+from .video_sizing import VIDEO_SIZES, parse_video_size
 
 VIDEO_MODEL_ID = "ltx-2.5"
 UNET_NAME = "ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors"
@@ -28,15 +19,6 @@ FPS = 24
 NEGATIVE_PROMPT = "pc game, console game, video game, cartoon, childish, ugly"
 SIGMAS_PASS1 = "1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
 SIGMAS_PASS2 = "0.85, 0.7250, 0.4219, 0.0"
-
-
-def parse_video_size(value: str | None) -> tuple[int, int]:
-    size = (value or "1280x720").strip().lower()
-    try:
-        return VIDEO_SIZES[size]
-    except KeyError:
-        allowed = ", ".join(VIDEO_SIZES)
-        raise ValueError(f"size must be one of: {allowed}")
 
 
 def _ic_guide(graph, conditioning, latent, image, vae, downscale, strength):

@@ -20,8 +20,8 @@ points to `comfy-docker-tailscale-serve-video-1` on `tailscale-mesh`.
 |---|---|---|
 | `model` | yes | `ltx-2.5` |
 | `prompt` | yes | Text describing the clip |
-| `seconds` | no | Any whole number from `1` through `12` (default `4`) |
-| `size` | no | `512x320`, `640x384`, `768x512`, `1280x720`, `720x1280`, `1792x1024`, or `1024x1792` (default `1280x720`) |
+| `seconds` | no | Whole number from `1` through `12` (default `4`), subject to the size-duration budget |
+| `size` | no | Custom `WIDTHxHEIGHT`, each dimension a multiple of 64 in `256..2048`; discover presets and per-size durations through capabilities (default `1280x720`) |
 | `input_reference` | no | PNG, JPEG, or WebP image for image-to-video generation |
 | `camera_lora` | no | `dolly-in`, `dolly-out`, `dolly-left`, `dolly-right`, `jib-up`, `jib-down`, `static` |
 | `camera_lora_strength` | no | Finite `0` through `2`, default `0.8`; requires `camera_lora` |
@@ -39,10 +39,18 @@ Fractional durations are not accepted. At 24 FPS, the workflow uses
 
 The generation graph samples at half resolution (8 steps), applies a latent
 2x spatial upscale, then refines (3 steps). Camera/regular LoRA patches feed
-both passes. The nominal `1280x720` and `720x1280` presets currently decode to
-`1280x704` and `704x1280`: the coarse latent grid floors dimensions to multiples
-of 32. The other presets are aligned. Low presets are useful for bounded tests,
-not evidence of delivery-resolution quality or high-resolution VRAM capacity.
+both passes. The legacy `1280x720` and `720x1280` names are explicit aliases for
+`1280x704` and `704x1280`; receipts and status responses report the actual size.
+Other custom sizes must already be aligned and are rejected rather than silently
+rounded. Half-resolution sampling on a 32-pixel latent grid requires 64-pixel
+output alignment. Low presets are useful for bounded tests, not evidence of
+delivery-resolution quality or high-resolution VRAM capacity.
+
+Both models share a configurable per-frame pixel limit and an output pixel-frame
+budget. This means some previously admitted long, high-resolution combinations
+now return `400 video_resource_limit` before uploads or backend work. See
+[video sizing and benchmarking](VIDEO_SIZING.md) for shared square/landscape/
+portrait presets, limits, OOM handling and an opt-in resumable GPU matrix runner.
 
 ## Create a MiniMax H3 video
 
@@ -53,7 +61,7 @@ The same `POST /v1/videos` endpoint accepts these H3 multipart fields:
 | `model` | yes | `minimax-h3` |
 | `prompt` | yes | Nonblank text describing the clip |
 | `frames` | no | Exactly `17k+5` in `124..362`, default `124` |
-| `size` | no | Only `864x480`, also the default |
+| `size` | no | Custom `WIDTHxHEIGHT`, each dimension a multiple of 32 in `256..2048`, subject to the shared size-duration budget; default `864x480` |
 | `seed` | no | Unsigned decimal integer `0..18446744073709551615`, default `0`; JavaScript must send an exact decimal string |
 | `input_reference` | no | One PNG/JPEG still for FL8 first-frame image to video |
 | `images` | no | Repeated PNG/JPEG still uploads indexed by metadata in this request |
@@ -241,6 +249,12 @@ ComfyUI must retain queue/history/output; a ComfyUI restart/history purge can
 make a video unavailable. Expired/unknown video IDs return HTTP 404. There is
 no video cancellation or idempotency/recovery endpoint. Polling never submits
 a replacement job. Do not treat receipt loss as permission to retry blindly.
+
+New receipts/status responses include durable `size`, `frames`, `fps` and
+`duration` for both models. Legacy IDs retain their original metadata. Handled
+ComfyUI OOM failures are terminal `failed` jobs with `upstream_out_of_memory`,
+`retryable:false`, and `suggested_action:reduce_size_or_duration`; polling never
+retries, flushes another job's models, or restarts the backend.
 
 For queued image generation, edits and variations, see `IMAGE_JOBS.md`.
 

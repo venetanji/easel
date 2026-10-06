@@ -93,7 +93,7 @@ def test_t2v_exact_frames_seed_and_durable_receipt(api):
     assert client.get('/v1/videos/'+receipt['id']+'/content').content == b'mp4-output'
     assert backend.queue_calls == 2
 
-@pytest.mark.parametrize('fields', [dict(seconds='5'),dict(frames='125'),dict(frames='123'),dict(frames='379'),dict(seed=str(2**64)),dict(size='1280x720'),dict(camera_lora='static'),dict(negative_prompt='x'),dict(frames='true'),dict(semantic_references='[]'),dict(temporal_groups='[]'),dict(input_audio='file.wav')])
+@pytest.mark.parametrize('fields', [dict(seconds='5'),dict(frames='125'),dict(frames='123'),dict(frames='379'),dict(seed=str(2**64)),dict(size='1280x721'),dict(camera_lora='static'),dict(negative_prompt='x'),dict(frames='true'),dict(semantic_references='[]'),dict(temporal_groups='[]'),dict(input_audio='file.wav')])
 def test_invalid_input_has_zero_upstream_work(api, fields):
     client, backend = api
     assert submit(client, **fields).status_code == 400

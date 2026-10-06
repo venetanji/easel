@@ -7,6 +7,12 @@ selected H3 graph before queue admission or uploads. The local owner reviews,
 pilots, and deploys these changes; GPU execution and visual review remain
 rollout gates.
 
+The October 6, 2026 [video-sizing pilot](VIDEO_SIZING.md) adds local GPU execution
+evidence for four unconditioned FL8 T2V resolution/frame-count combinations and
+supersedes the original fixed-resolution admission policy. It does not validate
+FL8 I2V, REF20, temporal guidance or visual/audio quality; those rollout gates
+remain separate from node availability and decoder correctness.
+
 ## Licensing clarification (5 October 2026)
 
 The maintainer confirmed that the Comfy Graph recipes derive from official

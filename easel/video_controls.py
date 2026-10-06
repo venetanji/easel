@@ -15,7 +15,8 @@ from dataclasses import dataclass
 from starlette.datastructures import UploadFile
 
 from .errors import APIError
-from .video_graph import FPS, VIDEO_MODEL_ID, VIDEO_SIZES
+from .video_graph import FPS, VIDEO_MODEL_ID
+from .video_sizing import VideoLimits
 from .video_loras import MAX_VIDEO_LORAS
 
 MAX_GUIDING_FRAMES = 8
@@ -166,11 +167,11 @@ async def guiding_nodes_available(comfy) -> bool:
     return True
 
 
-def video_capabilities(*, guides_available: bool) -> dict:
+def video_capabilities(*, guides_available: bool, limits: VideoLimits = VideoLimits()) -> dict:
     return {
         'object': 'video.capabilities', 'schema_version': 1, 'model': VIDEO_MODEL_ID,
         'fps': FPS, 'seconds': {'min': 1, 'max': 12, 'default': 4},
-        'sizes': list(VIDEO_SIZES), 'default_size': '1280x720',
+        **limits.discovery(VIDEO_MODEL_ID), 'default_size': '1280x720',
         'seed': {'min': '0', 'max': str(2 ** 64 - 2), 'encoding': 'decimal_string'},
         'loras': {'max_count': MAX_VIDEO_LORAS, 'min_strength': 0, 'max_strength': 2,
                   'default_strength': 1, 'camera_default_strength': 0.8,

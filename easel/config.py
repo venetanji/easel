@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from .video_sizing import DEFAULT_MAX_PIXELS, DEFAULT_MAX_PIXEL_FRAMES, VideoLimits
+
 @dataclass(frozen=True)
 class ModelSpec:
     unet: str
@@ -96,6 +98,11 @@ class Settings:
     suno_url: str | None = None
     suno_api_token: str | None = None
     suno_timeout: float = 180.0
+    video_max_pixels: int = DEFAULT_MAX_PIXELS
+    video_max_pixel_frames: int = DEFAULT_MAX_PIXEL_FRAMES
+
+    def __post_init__(self):
+        VideoLimits(self.video_max_pixels, self.video_max_pixel_frames)
 
     @classmethod
     def from_env(cls, env: dict | None = None) -> "Settings":
@@ -117,4 +124,6 @@ class Settings:
             suno_url=_clean(env.get("SUNO_URL")),
             suno_api_token=_clean(env.get("SUNO_REST_API_TOKEN")),
             suno_timeout=float(env.get("SUNO_TIMEOUT", "180")),
+            video_max_pixels=int(env.get("EASEL_VIDEO_MAX_PIXELS", str(DEFAULT_MAX_PIXELS))),
+            video_max_pixel_frames=int(env.get("EASEL_VIDEO_MAX_PIXEL_FRAMES", str(DEFAULT_MAX_PIXEL_FRAMES))),
         )

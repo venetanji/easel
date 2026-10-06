@@ -32,6 +32,7 @@ from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
 from .video_graph import VIDEO_MODEL_ID, parse_video_size, text_to_video
 from .video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id, video_timing
+from .video_sizing import VideoLimits, VideoSizingError
 from . import h3_controls, h3_graph
 from .video_controls import (guiding_nodes_available, parse_guiding_frames,
                              validate_video_form, validate_video_uploads, video_capabilities)
@@ -314,6 +315,10 @@ async def read_video_job(comfy: ComfyClient, video_id: str,
             status = "cancelled" if interrupted else "failed"
             error = {"code": "upstream_cancelled" if interrupted else "upstream_execution_error",
                      "message": "generation was interrupted" if interrupted else message}
+            if not interrupted and ComfyClient.is_out_of_memory(status_info):
+                error = {"code": "upstream_out_of_memory",
+                         "message": "ComfyUI ran out of memory; reduce size or duration before retrying",
+                         "retryable": False, "suggested_action": "reduce_size_or_duration"}
             progress = 0
             completed_at = comfy_event_time(status_info, "execution_error") or int(time.time())
         elif status_info.get("completed") or status_info.get("status_str") == "success":
@@ -386,6 +391,7 @@ def build_edit_graph(spec: ModelSpec, *, image_filenames, prompt, width, height,
 
 def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, suno=None) -> FastAPI:
     settings = settings or Settings.from_env()
+    video_limits = VideoLimits(settings.video_max_pixels, settings.video_max_pixel_frames)
     shared_backend = bool(settings.comfy_video_url) and (
         settings.comfy_url.rstrip("/") == settings.comfy_video_url.rstrip("/")
         or comfy is not None and comfy is comfy_video
@@ -500,15 +506,15 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             raise APIError(400, f"model '{model}' not found", code="model_not_found", param="model")
         try:
             if model == h3_graph.VIDEO_MODEL_ID:
-                return await h3_controls.capabilities(comfy)
+                return await h3_controls.capabilities(comfy, limits=video_limits)
             available = await guiding_nodes_available(comfy)
         except (ComfyError, httpx.HTTPError) as exc:
             message = "H3 runtime discovery failed" if model == h3_graph.VIDEO_MODEL_ID else str(exc)
             raise APIError(502, message, type="api_error", code="upstream_error") from None
-        return video_capabilities(guides_available=available)
+        return video_capabilities(guides_available=available, limits=video_limits)
 
     async def create_h3_video(request: Request):
-        admission = await h3_controls.admit(await request.form())
+        admission = await h3_controls.admit(await request.form(), limits=video_limits)
         comfy = request.app.state.comfy_video
         if comfy is None:
             raise APIError(503, "video server is not available", type="api_error",
@@ -553,7 +559,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             except (ComfyError, httpx.HTTPError):
                 raise APIError(502, "H3 prompt submission failed; do not automatically retry", type="api_error", code="upstream_error") from None
         created_at = int(time.time())
-        video_id = make_video_id(prompt_id, h3_graph.VIDEO_MODEL_ID, created_at, frames=admission.frames)
+        video_id = make_video_id(prompt_id, h3_graph.VIDEO_MODEL_ID, created_at,
+                                 frames=admission.frames, size=(admission.width, admission.height))
         return {"id": video_id, "object": "video", "created_at": created_at, "status": "queued",
                 "completed_at": None, "expires_at": created_at + VIDEO_TTL_SECONDS,
                 "error": None, "model": h3_graph.VIDEO_MODEL_ID, "progress": 0, **video_timing(video_id)}
@@ -593,9 +600,10 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         if not 1 <= seconds <= 12:
             raise APIError(400, "seconds must be between 1 and 12", param="seconds")
         try:
-            width, height = parse_video_size(size)
-        except ValueError as exc:
-            raise APIError(400, str(exc), param="size")
+            width, height = parse_video_size(size, limits=video_limits)
+            video_limits.check_frames(model, width, height, seconds * 24 + 1)
+        except VideoSizingError as exc:
+            raise APIError(400, str(exc), param=exc.param, code=exc.code, details=exc.details) from None
         if seed is not None and not 0 <= seed <= 2 ** 64 - 2:
             raise APIError(400, "seed and seed+1 must fit unsigned 64-bit integers", param="seed")
         try:
@@ -752,7 +760,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             except (ComfyError, httpx.HTTPError) as exc:
                 raise APIError(502, str(exc), type="api_error", code="upstream_error")
 
-        video_id = make_video_id(prompt_id, model, created_at)
+        video_id = make_video_id(prompt_id, model, created_at, frames=seconds * 24 + 1, size=(width, height))
         return {
             "id": video_id,
             **video_timing(video_id),

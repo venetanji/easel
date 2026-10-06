@@ -13,6 +13,7 @@ from starlette.datastructures import UploadFile
 
 from . import h3_graph as h3
 from .errors import APIError
+from .video_sizing import VideoLimits, VideoSizingError, parse_video_size
 
 MAX_BYTES = 32 * 1024 * 1024
 MAX_PIXELS = 64_000_000
@@ -49,6 +50,8 @@ class H3Request:
     prompt: str
     frames: int
     seed: int
+    width: int
+    height: int
     uploads: tuple[UploadFile, ...]
     names: tuple[str, ...]
     references: tuple[SemanticReference, ...]
@@ -57,7 +60,7 @@ class H3Request:
 
     def graph(self, names: tuple[str, ...] | None = None) -> dict:
         names = self.names if names is None else names
-        options = dict(frames=self.frames, seed=self.seed)
+        options = dict(frames=self.frames, seed=self.seed, width=self.width, height=self.height)
         refs = tuple(names[ref.image_index] for ref in self.references)
         if self.groups:
             return h3.build_temporal_guided_video(self.prompt, guides=[
@@ -109,7 +112,7 @@ def metadata(form, field: str, maximum: int) -> list:
     return items
 
 
-async def admit(form) -> H3Request:
+async def admit(form, *, limits: VideoLimits = VideoLimits()) -> H3Request:
     for key in form:
         if key not in FIELDS:
             invalid(f'unsupported H3 parameter: {key}', key)
@@ -128,8 +131,11 @@ async def admit(form) -> H3Request:
     if (frames - 5) % 17:
         invalid('frames must lie on the 17k+5 grid', 'frames')
     seed = integer(form, 'seed', 0, 0, 2**64-1)
-    if form.get('size', '864x480') != '864x480':
-        invalid('H3 supports only the conservative 864x480 preset', 'size')
+    try:
+        width, height = parse_video_size(form.get('size'), model=h3.VIDEO_MODEL_ID, limits=limits)
+        limits.check_frames(h3.VIDEO_MODEL_ID, width, height, frames)
+    except VideoSizingError as exc:
+        raise APIError(400, str(exc), param=exc.param, code=exc.code, details=exc.details) from None
     refs = []
     for item in metadata(form, 'semantic_references', 2):
         if not isinstance(item, dict) or set(item) != {'image_index'} or type(item['image_index']) is not int:
@@ -206,7 +212,7 @@ async def admit(form) -> H3Request:
     for group in groups:
         if len({dimensions[i] for i in group.image_indices}) != 1:
             invalid('all images in each temporal group must have matching dimensions', 'temporal_groups')
-    return H3Request(prompt, frames, seed, uploads, tuple(names), tuple(refs), tuple(groups), first_frame)
+    return H3Request(prompt, frames, seed, width, height, uploads, tuple(names), tuple(refs), tuple(groups), first_frame)
 
 
 def _schema_for(declared, field):
@@ -314,7 +320,7 @@ async def runtime_available(comfy, graph: dict) -> bool:
         return False
 
 
-async def capabilities(comfy) -> dict:
+async def capabilities(comfy, *, limits: VideoLimits = VideoLimits()) -> dict:
     common = dict(frames=362, seed=2**64-1)
     profiles = {
         'fl8': h3.build_i2v('discovery', image_filename='h3_probe.png', **common),
@@ -327,7 +333,7 @@ async def capabilities(comfy) -> dict:
                         'validation': 'graph_contract_tested', 'gpu_executed': False, 'visually_reviewed': False}
     return {'object':'video.capabilities','schema_version':1,'model':h3.VIDEO_MODEL_ID,
             'fps':24,'frames':{'min':124,'max':362,'default':124,'step':17,'offset':5},
-            'sizes':['864x480'],'default_size':'864x480',
+            **limits.discovery(h3.VIDEO_MODEL_ID),'default_size':'864x480',
             'seed':{'min':'0','max':str(2**64-1),'encoding':'decimal_string'},
             'profiles':result,'semantic_references':{'max_count':2,'fields':['image_index']},
             'temporal_groups':{'max_count':3,'image_counts':[1,5,22,39], 'fields':['frame_index','image_indices']},
