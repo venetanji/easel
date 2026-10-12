@@ -64,3 +64,12 @@ def test_registry_returns_same_payload_without_sharing_mutable_data():
     assert client.get('/v1/models/minimax-h3/guide?mode=base').json() == payload
     payload['sources'].clear()
     assert get_model_guide('minimax-h3', 'base')['sources']
+
+
+def test_missing_mode_is_explicit_and_auth_is_checked_first():
+    client, _ = build(api_key='secret')
+    path = '/v1/models/qwen-image-2.1/guide'
+    assert client.get(path).status_code == 401
+    response = client.get(path, headers={'Authorization': 'Bearer secret'})
+    assert response.status_code == 400
+    assert response.json()['error']['param'] == 'mode'

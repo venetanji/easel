@@ -485,8 +485,10 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
 
     @app.get("/v1/models/{model_id}/guide", dependencies=auth_docs,
               **ROUTE_DOCS[("GET", "/v1/models/{model_id}/guide")])
-    async def model_guide(request: Request, model_id: str, mode: str):
+    async def model_guide(request: Request, model_id: str, mode: str | None = None):
         require_auth(settings, request)
+        if mode is None:
+            raise APIError(400, 'mode is required', param='mode')
         return get_model_guide(model_id, mode)
 
     @app.get("/v1/videos/loras", dependencies=auth_docs,
