@@ -248,3 +248,66 @@ library before retrying: generation may already have consumed credits.""",
         "description": "Discovers the logged-in account's base and custom music models. Use an exact returned ID as suno_model on suno-music requests; omitted or blank uses the backend's configured default_model, not its previous selection. The response also includes selected_model and data entries with availability, selection, and default flags. Discovery does not change the selected model or spend generation credits, but shares Suno's browser queue and pending-attempt guard. Unlike /v1/models, this route contacts the backend.",
     },
 }
+
+
+_REQUEST_SCHEMA_NAMES = {
+    "/v1/images/generations": ("application/json", "ImageGenerationRequest"),
+    "/v1/images/edits": ("multipart/form-data", "ImageEditRequest"),
+    "/v1/images/variations": ("multipart/form-data", "ImageVariationRequest"),
+    "/v1/videos": ("multipart/form-data", "VideoGenerationRequest"),
+    "/v1/audio/generations": ("application/json", "AudioGenerationRequest"),
+    "/v1/audio/generations/abandon": ("application/json", "AudioGenerationAbandonRequest"),
+}
+
+_COMPONENT_SCHEMA_NAMES = {
+    "MusicGeneration": "AudioMusicGenerationRequest",
+    "SpeechGeneration": "AudioSpeechGenerationRequest",
+    "SoundGeneration": "AudioSoundGenerationRequest",
+    "HTTPValidationError": "ValidationErrorResponse",
+    "ValidationError": "ValidationErrorDetail",
+}
+
+
+def _replace_schema_refs(value, replacements: dict[str, str]) -> None:
+    if isinstance(value, dict):
+        reference = value.get("$ref")
+        if isinstance(reference, str) and reference in replacements:
+            value["$ref"] = replacements[reference]
+        for nested in value.values():
+            _replace_schema_refs(nested, replacements)
+    elif isinstance(value, list):
+        for nested in value:
+            _replace_schema_refs(nested, replacements)
+
+
+def configure_openapi(app) -> None:
+    """Name documentation schemas without altering runtime request models."""
+    generate_openapi = app.openapi
+
+    def openapi() -> dict:
+        if app.openapi_schema is not None:
+            return app.openapi_schema
+        schema = generate_openapi()
+        components = schema["components"]["schemas"]
+        names = dict(_COMPONENT_SCHEMA_NAMES)
+        prefix = "#/components/schemas/"
+        for endpoint, (content_type, name) in _REQUEST_SCHEMA_NAMES.items():
+            media = schema["paths"][endpoint]["post"]["requestBody"]["content"][content_type]
+            body = media["schema"]
+            if "$ref" in body:
+                names[body["$ref"].removeprefix(prefix)] = name
+            else:
+                components[name] = body
+            media["schema"] = {"$ref": prefix + name}
+        for original, name in names.items():
+            if original in components:
+                components[name] = components.pop(original)
+        for name, definition in components.items():
+            definition["title"] = name
+        _replace_schema_refs(schema, {prefix + original: prefix + name
+                                      for original, name in names.items()})
+        schema["components"]["schemas"] = dict(sorted(components.items()))
+        app.openapi_schema = schema
+        return schema
+
+    app.openapi = openapi

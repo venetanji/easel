@@ -2,6 +2,7 @@
 import dataclasses
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from easel.app import create_app
@@ -13,6 +14,11 @@ def client(tmp_path):
     settings = dataclasses.replace(Settings.from_env({}), api_key="test-only-key",
                                    image_job_dir=str(tmp_path))
     return TestClient(create_app(settings=settings))
+
+
+def request_schema(schema, endpoint, content_type):
+    reference = schema["paths"][endpoint]["post"]["requestBody"]["content"][content_type]["schema"]["$ref"]
+    return schema["components"]["schemas"][reference.rsplit("/", 1)[-1]]
 
 
 def test_openapi_advertises_bearer_on_every_protected_operation(client):
@@ -128,7 +134,7 @@ def test_image_swagger_bodies_and_async_header_follow_existing_contract(client):
         assert prefer["in"] == "header"
         assert not prefer["required"]
         media_type = "application/json" if endpoint == "generations" else "multipart/form-data"
-        body = operation["requestBody"]["content"][media_type]["schema"]
+        body = request_schema(schema, f"/v1/images/{endpoint}", media_type)
         assert body["properties"]["model"]["enum"] == list(MODELS)
         if endpoint == "generations":
             assert body["required"] == ["prompt"]
@@ -143,9 +149,10 @@ def test_audio_examples_match_real_request_models_without_replacing_schema(clien
     from pydantic import TypeAdapter
     from easel.audio_api import MusicGeneration, SpeechGeneration, SoundGeneration
 
-    operation = client.get("/openapi.json").json()["paths"]["/v1/audio/generations"]["post"]
+    schema = client.get("/openapi.json").json()
+    operation = schema["paths"]["/v1/audio/generations"]["post"]
     media = operation["requestBody"]["content"]["application/json"]
-    assert len(media["schema"]["anyOf"]) == 3
+    assert len(request_schema(schema, "/v1/audio/generations", "application/json")["anyOf"]) == 3
     adapter = TypeAdapter(MusicGeneration | SpeechGeneration | SoundGeneration)
     assert set(media["examples"]) == {"music", "speech", "sound"}
     for example in media["examples"].values():
@@ -163,3 +170,90 @@ def test_docs_preserve_network_auth_policy_and_native_audio_discovery(client):
     assert operation["security"] == [{"BearerAuth": []}]
     assert "suno_model" in operation["description"]
     assert "default_model" in operation["description"]
+
+
+def test_all_component_schemas_have_clear_consistent_names(client):
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+    assert set(components) == {
+        "ImageGenerationRequest", "ImageEditRequest", "ImageVariationRequest",
+        "VideoGenerationRequest", "AudioGenerationRequest",
+        "AudioMusicGenerationRequest", "AudioSpeechGenerationRequest",
+        "AudioSoundGenerationRequest", "AudioGenerationAbandonRequest",
+        "ValidationErrorResponse", "ValidationErrorDetail",
+    }
+    assert list(components) == sorted(components)
+    for name, definition in components.items():
+        assert definition["title"] == name
+
+
+@pytest.mark.parametrize("endpoint,content_type,name", [
+    ("/v1/images/generations", "application/json", "ImageGenerationRequest"),
+    ("/v1/images/edits", "multipart/form-data", "ImageEditRequest"),
+    ("/v1/images/variations", "multipart/form-data", "ImageVariationRequest"),
+    ("/v1/videos", "multipart/form-data", "VideoGenerationRequest"),
+    ("/v1/audio/generations", "application/json", "AudioGenerationRequest"),
+    ("/v1/audio/generations/abandon", "application/json", "AudioGenerationAbandonRequest"),
+])
+def test_every_request_body_uses_a_named_schema(client, endpoint, content_type, name):
+    schema = client.get("/openapi.json").json()
+    media = schema["paths"][endpoint]["post"]["requestBody"]["content"][content_type]
+    assert media["schema"] == {"$ref": "#/components/schemas/" + name}
+
+
+def test_schema_renaming_preserves_all_references_and_audio_variants(client):
+    schema = client.get("/openapi.json").json()
+    components = schema["components"]["schemas"]
+
+    def check_references(value):
+        if isinstance(value, dict):
+            if "$ref" in value:
+                assert value["$ref"].startswith("#/components/schemas/")
+                assert value["$ref"].rsplit("/", 1)[-1] in components
+            for nested in value.values():
+                check_references(nested)
+        elif isinstance(value, list):
+            for nested in value:
+                check_references(nested)
+
+    check_references(schema)
+    assert components["AudioGenerationRequest"]["anyOf"] == [
+        {"$ref": "#/components/schemas/AudioMusicGenerationRequest"},
+        {"$ref": "#/components/schemas/AudioSpeechGenerationRequest"},
+        {"$ref": "#/components/schemas/AudioSoundGenerationRequest"},
+    ]
+
+
+def test_named_openapi_schema_caches_and_regenerates_cleanly(client):
+    original = client.app.openapi()
+    assert client.app.openapi() is original
+    client.app.openapi_schema = None
+    regenerated = client.app.openapi()
+    assert regenerated == original
+    assert regenerated is not original
+
+
+@pytest.mark.parametrize("model_name,schema_name", [
+    ("MusicGeneration", "AudioMusicGenerationRequest"),
+    ("SpeechGeneration", "AudioSpeechGenerationRequest"),
+    ("SoundGeneration", "AudioSoundGenerationRequest"),
+    ("AbandonGeneration", "AudioGenerationAbandonRequest"),
+])
+def test_named_audio_schemas_preserve_generated_request_definitions(client, model_name, schema_name):
+    named = client.app.openapi()["components"]["schemas"][schema_name]
+    client.app.openapi_schema = None
+    original = FastAPI.openapi(client.app)
+    expected = original["components"]["schemas"][model_name].copy()
+    expected["title"] = schema_name
+    assert named == expected
+
+
+def test_named_video_schema_preserves_generated_form_definition(client):
+    named = client.app.openapi()["components"]["schemas"]["VideoGenerationRequest"].copy()
+    client.app.openapi_schema = None
+    original = FastAPI.openapi(client.app)
+    reference = original["paths"]["/v1/videos"]["post"]["requestBody"]["content"]["multipart/form-data"]["schema"]["$ref"]
+    generated = original["components"]["schemas"][reference.rsplit("/", 1)[-1]].copy()
+    named.pop("title")
+    generated.pop("title")
+    assert named == generated

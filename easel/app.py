@@ -30,7 +30,7 @@ from .config import MODELS, ModelSpec, Settings, UnknownModelError, parse_size, 
 from .errors import APIError, error_response
 from .image_jobs import ImageJobs, wants_async
 from .audio_api import AUDIO_MODELS, register_audio_routes
-from .api_docs import API_DESCRIPTION, ROUTE_DOCS, TAGS
+from .api_docs import API_DESCRIPTION, ROUTE_DOCS, TAGS, configure_openapi
 from .suno_client import SunoClient
 from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
@@ -1055,6 +1055,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             {"filename": filename, "subfolder": subfolder, "type": type})
         return Response(content=raw, media_type="image/png")
 
+    configure_openapi(app)
     return app
 
 

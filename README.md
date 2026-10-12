@@ -64,6 +64,10 @@ Open `/docs` on your Easel origin (for the local command above,
 **Images**, **Videos**, and **Audio**. `/openapi.json` exposes the same contract
 for API tooling.
 
+Request schemas have stable, resource-specific names such as
+`ImageGenerationRequest`, `VideoGenerationRequest`, and `AudioMusicGenerationRequest`.
+These documentation names do not change request fields or validation.
+
 If `EASEL_API_KEY` is configured, requests from untrusted networks need a bearer
 token. Click **Authorize** and paste the **raw key**, without a `Bearer ` prefix.
 Swagger adds the bearer header to API requests,
