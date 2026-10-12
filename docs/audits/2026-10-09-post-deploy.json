@@ -1,0 +1,28 @@
+{
+  "auth": {
+    "missing": 401,
+    "wrong": 401,
+    "spoofed_tailnet": 401,
+    "correct": 200
+  },
+  "public_urls": {
+    "image": {
+      "url": "https://easel.ait4x.org/v1/images/jobs/image_job_1791475576_8046f31fd0234e1cad5ab9df406a077e/content/0",
+      "content_http_status": 200
+    },
+    "audio": {
+      "url": "https://easel.ait4x.org/v1/audio/tracks/117a80c2-559d-4578-90bd-845755c70710/content",
+      "content_http_status": 200,
+      "status_url": "https://easel.ait4x.org/v1/audio/generations/status"
+    }
+  },
+  "local_models": 200,
+  "require_auth_addresses": [
+    "100.64.0.11/32",
+    "fd7a:115c:a1e0::b/128"
+  ],
+  "trusted_proxy_forwarded_hop_tests": {
+    "fd7a:115c:a1e0::b": 401,
+    "100.64.0.9": 200
+  }
+}

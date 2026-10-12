@@ -1,0 +1,25 @@
+[
+  {
+    "mode": "sync",
+    "prompt_id": "93a0a4e0-7970-4d3b-b816-95f105c42b2c",
+    "response_read": false,
+    "queue_at_disconnect": "queue_running",
+    "closed_after_seconds": 0.029,
+    "backend_status": "success",
+    "durable_receipts": []
+  },
+  {
+    "mode": "async",
+    "prompt_id": "03cb1fa0-7b3f-44e9-9bc4-663bc5d3809b",
+    "response_read": false,
+    "queue_at_disconnect": "queue_running",
+    "closed_after_seconds": 0.032,
+    "backend_status": "success",
+    "durable_receipts": [
+      [
+        "image_job_1791476723_bae33a5e1f90438fb6b4408400b3a980",
+        "completed"
+      ]
+    ]
+  }
+]

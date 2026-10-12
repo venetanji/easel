@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.background import BackgroundTask
 
 from .errors import APIError
+from .public_urls import request_base_url
 
 AUDIO_MODELS = ("suno-music", "suno-speech", "suno-sound")
 
@@ -27,7 +28,10 @@ class MusicGeneration(AudioRequest):
     title: str = ""
     make_instrumental: bool = False
     negative_prompt: str = Field(default="", max_length=1000)
-    suno_model: str = ""
+    suno_model: str = Field(
+        default="", description="Exact native ID from GET /v1/audio/models, including custom models. "
+        "Omitted or blank uses the Suno backend's configured default.",
+    )
     weirdness: int | None = Field(default=None, ge=0, le=100)
     style_influence: int | None = Field(default=None, ge=0, le=100)
     variety: int | None = Field(default=None, ge=0, le=4)
@@ -117,14 +121,14 @@ def _track_urls(data: dict, request: Request) -> dict:
         except ValueError as exc:
             raise APIError(502, "Suno returned an invalid track ID", type="api_error",
                            code="upstream_invalid_response") from exc
-        base = str(request.base_url).rstrip("/") + f"/v1/audio/tracks/{song_id}"
+        base = request_base_url(request) + f"/v1/audio/tracks/{song_id}"
         result.update(audio_url=base + "/content", download_url=base + "/download")
     return result
 
 
 def _generation(data: dict, request: Request) -> dict:
     result = {**data, "object": "audio.generation",
-              "status_url": str(request.base_url).rstrip("/") + "/v1/audio/generations/status"}
+              "status_url": request_base_url(request) + "/v1/audio/generations/status"}
     if isinstance(data.get("songs"), list):
         result["songs"] = [_track_urls(song, request) for song in data["songs"]]
     return result
@@ -135,6 +139,11 @@ def register_audio_routes(app, require_auth) -> None:
         require_auth(request.app.state.settings, request)
 
     router = APIRouter(prefix="/v1/audio", tags=["Audio"], dependencies=[Depends(authenticate)])
+
+    @router.get("/models")
+    async def models(request: Request):
+        data, _status = await _while_connected(request, _suno(request).request("GET", "models"))
+        return data
 
     @router.post("/generations")
     async def generate(request: Request, body: MusicGeneration | SpeechGeneration | SoundGeneration):

@@ -3,10 +3,20 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass
+from ipaddress import IPv4Network, IPv6Network, ip_network
 from pathlib import Path
 from typing import Literal
+from urllib.parse import urlsplit
 
 from .video_sizing import DEFAULT_MAX_PIXELS, DEFAULT_MAX_PIXEL_FRAMES, VideoLimits
+
+Network = IPv4Network | IPv6Network
+DEFAULT_TRUSTED_CLIENT_CIDRS = "127.0.0.0/8,::1/128,100.64.0.0/10,fd7a:115c:a1e0::/48"
+
+
+def parse_networks(value: str) -> tuple[Network, ...]:
+    return tuple(ip_network(cidr.strip()) for cidr in value.split(",") if cidr.strip())
+
 
 @dataclass(frozen=True)
 class ModelSpec:
@@ -100,9 +110,19 @@ class Settings:
     suno_timeout: float = 180.0
     video_max_pixels: int = DEFAULT_MAX_PIXELS
     video_max_pixel_frames: int = DEFAULT_MAX_PIXEL_FRAMES
+    trusted_client_networks: tuple[Network, ...] = parse_networks(DEFAULT_TRUSTED_CLIENT_CIDRS)
+    trusted_proxy_networks: tuple[Network, ...] = ()
+    require_auth_networks: tuple[Network, ...] = ()
+    public_url: str | None = None
 
     def __post_init__(self):
         VideoLimits(self.video_max_pixels, self.video_max_pixel_frames)
+        if self.public_url:
+            origin = urlsplit(self.public_url)
+            if (origin.scheme not in {"http", "https"} or not origin.hostname
+                    or origin.username is not None or origin.password is not None
+                    or origin.path not in {"", "/"} or origin.query or origin.fragment):
+                raise ValueError("EASEL_PUBLIC_URL must be an HTTP(S) origin without credentials or a path")
 
     @classmethod
     def from_env(cls, env: dict | None = None) -> "Settings":
@@ -126,4 +146,9 @@ class Settings:
             suno_timeout=float(env.get("SUNO_TIMEOUT", "180")),
             video_max_pixels=int(env.get("EASEL_VIDEO_MAX_PIXELS", str(DEFAULT_MAX_PIXELS))),
             video_max_pixel_frames=int(env.get("EASEL_VIDEO_MAX_PIXEL_FRAMES", str(DEFAULT_MAX_PIXEL_FRAMES))),
+            trusted_client_networks=parse_networks(
+                env.get("EASEL_TRUSTED_CLIENT_CIDRS", DEFAULT_TRUSTED_CLIENT_CIDRS)),
+            trusted_proxy_networks=parse_networks(env.get("EASEL_TRUSTED_PROXY_CIDRS", "")),
+            require_auth_networks=parse_networks(env.get("EASEL_REQUIRE_AUTH_CIDRS", "")),
+            public_url=_clean(env.get("EASEL_PUBLIC_URL")),
         )

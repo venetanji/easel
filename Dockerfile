@@ -13,4 +13,4 @@ COPY easel ./easel
 RUN uv sync --frozen --no-dev
 
 EXPOSE 8080
-CMD ["uvicorn", "easel.app:app", "--host", "0.0.0.0", "--port", "8080"]
+CMD ["uvicorn", "easel.app:app", "--host", "0.0.0.0", "--port", "8080", "--no-proxy-headers"]

@@ -23,9 +23,25 @@ is mounted into Easel. Suno retains ownership of its browser and saved files.
 | `suno-speech` | The script to speak | `tone`, `background_music`, `vocal_gender`, `variety` |
 | `suno-sound` | A sound-effect description | `sound_type` (`one_shot` or `loop`), `bpm` |
 
-These are backend routing IDs, not pinned versions of Suno's models. Music's
-optional `suno_model` is the exact native model-picker label; omitting it leaves
-the browser's current selection unchanged. Music accepts a prompt, lyrics, or
+These are backend routing IDs, not pinned versions of Suno's models. The
+`suno-music` entry advertises `models_url` pointing to `GET /v1/audio/models`
+and `model_parameter: "suno_model"`. That authenticated endpoint discovers the
+logged-in account's live base and custom music models. Its response includes
+`default_model`, `selected_model`, and `data` entries with `id`, `custom`,
+`available`, `selected`, and `default`. Discovery does not change the selected
+model or spend generation credits; it shares Suno's browser queue and pending
+generation guard. Regular `/v1/models` discovery does not access the browser.
+
+Music's optional `suno_model` is an exact ID from `/v1/audio/models`. Omitted or
+blank uses the Suno service's `SUNO_DEFAULT_MODEL`, not the browser's previous
+selection. Configure that variable in the **Suno service's** `.env` to your
+custom model's exact name; its unconfigured default is `v6`. Explicit
+`suno_model: "v6"` selects the base model; a custom model ID selects that model.
+Unavailable models fail before Create, without silently falling back.
+Generation results include the selected native `suno_model` separately from
+the routing `model: "suno-music"`.
+
+Music accepts a prompt, lyrics, or
 both. `make_instrumental` defaults to false. Native account permissions, available
 models, generation credits and supported duration controls remain Suno's concern.
 The audio JSON contract is an Easel extension, not OpenAI's TTS/speech API.

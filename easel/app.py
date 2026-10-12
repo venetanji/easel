@@ -15,6 +15,8 @@ from fastapi.exceptions import RequestValidationError
 from starlette.datastructures import UploadFile
 from fastapi.responses import JSONResponse
 
+from .auth import require_auth
+from .public_urls import request_base_url
 from .comfy_client import (
     ComfyClient,
     ComfyError,
@@ -65,15 +67,6 @@ class Inflight:
 
 
 # ---- request-parsing helpers ----
-
-def require_auth(settings: Settings, request: Request) -> None:
-    if not settings.api_key:
-        return
-    header = request.headers.get("authorization", "")
-    token = header[7:].strip() if header[:7].lower() == "bearer " else ""
-    if token != settings.api_key:
-        raise APIError(401, "invalid or missing API key", code="invalid_api_key")
-
 
 def resolve_spec(model: str | None):
     model = (model or DEFAULT_MODEL).strip() or DEFAULT_MODEL
@@ -200,7 +193,7 @@ async def run_job(request: Request, graph: dict, response_format: str,
 
     data = []
     if response_format == "url":
-        base = str(request.base_url).rstrip("/")
+        base = request_base_url(request)
         for ref in refs:
             suffix = "&server=video" if server == "video" else ""
             data.append({"url": f"{base}/v1/images/view?{view_query(ref)}{suffix}"})
@@ -466,10 +459,15 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             model_ids.extend([VIDEO_MODEL_ID, h3_graph.VIDEO_MODEL_ID])
         if settings.suno_url:
             model_ids.extend(AUDIO_MODELS)
-        return {"object": "list", "data": [
+        data = [
             {"id": m, "object": "model", "created": created, "owned_by": "easel"}
             for m in model_ids
-        ]}
+        ]
+        if settings.suno_url:
+            music = next(entry for entry in data if entry["id"] == "suno-music")
+            music.update(models_url=request_base_url(request) + "/v1/audio/models",
+                         model_parameter="suno_model")
+        return {"object": "list", "data": data}
 
     @app.get("/v1/videos/loras")
     async def list_video_loras(request: Request, model: str = VIDEO_MODEL_ID):
@@ -996,7 +994,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
     async def image_job(request: Request, job_id: str):
         require_auth(settings, request)
         try:
-            result = await request.app.state.image_jobs.retrieve(job_id, str(request.base_url).rstrip("/"))
+            result = await request.app.state.image_jobs.retrieve(job_id, request_base_url(request))
             return JSONResponse(content=result, headers={"Cache-Control": "private, no-store"})
         except httpx.HTTPError as exc:
             raise APIError(502, str(exc), type="api_error", code="upstream_error")

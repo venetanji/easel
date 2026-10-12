@@ -8,6 +8,10 @@ services:
       COMFY_URL_IMAGE: ${COMFY_URL_IMAGE:-${COMFY_URL_FLUX:-http://comfy-docker-tailscale-serve-1:8188}}
       COMFY_URL_VIDEO: ${COMFY_URL_VIDEO:-http://comfy-docker-tailscale-serve-video-1:8188}
       EASEL_API_KEY: ${EASEL_API_KEY:-}
+      EASEL_TRUSTED_CLIENT_CIDRS: ${EASEL_TRUSTED_CLIENT_CIDRS-127.0.0.0/8,::1/128,100.64.0.0/10,fd7a:115c:a1e0::/48}
+      EASEL_TRUSTED_PROXY_CIDRS: ${EASEL_TRUSTED_PROXY_CIDRS:-}
+      EASEL_REQUIRE_AUTH_CIDRS: ${EASEL_REQUIRE_AUTH_CIDRS:-}
+      EASEL_PUBLIC_URL: ${EASEL_PUBLIC_URL:-}
       COMFY_JOB_TIMEOUT: ${COMFY_JOB_TIMEOUT:-600}
       COMFY_MAX_INFLIGHT: ${COMFY_MAX_INFLIGHT:-1}
       EASEL_VIDEO_MAX_PIXELS: ${EASEL_VIDEO_MAX_PIXELS:-2097152}
@@ -23,7 +27,7 @@ services:
     volumes:
       - image-jobs:/app/jobs
     ports:
-      - "${EASEL_PORT:-8799}:8080"
+      - "${EASEL_BIND_HOST:-0.0.0.0}:${EASEL_PORT:-8799}:8080"
     healthcheck:
       test: ["CMD", "/app/.venv/bin/python", "-c",
              "import urllib.request; urllib.request.urlopen('http://localhost:8080/health')"]

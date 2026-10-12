@@ -20,6 +20,7 @@ from easel.app import create_app
 from easel.config import Settings
 from easel.video_loras import VIDEO_LORAS
 from tests.test_video_guidance import GuideComfy
+from tests.test_audio_api import audio_client
 
 SOURCE = os.environ.get('EASEL_MEDIA_MCP_SOURCE')
 if not SOURCE:
@@ -144,3 +145,80 @@ process.stdout.write(JSON.stringify(parseMediaJob(input, undefined, input.id)));
 '''
         assert node_run(script, receipt)['id'] == receipt['id']
         assert node_run(script, client.get('/v1/videos/'+receipt['id']).json())['status'] == 'queued'
+
+
+@pytest.mark.parametrize('mode', ['text', 'image', 'semantic', 'temporal'])
+def test_h3_mcp_submission_reaches_actual_native_graph(tmp_path, mode):
+    from tests.test_h3_api import H3Comfy
+    backend = H3Comfy()
+    settings = dataclasses.replace(Settings.from_env({}), comfy_video_url='http://video',
+                                   image_job_dir=str(tmp_path))
+    options = {'model': 'minimax-h3', 'prompt': 'shot', 'frames': 141, 'seed': str(2**64-1)}
+    if mode == 'image':
+        options['inputReference'] = still()
+    elif mode in ('semantic', 'temporal'):
+        options['semanticReferences'] = [still()]
+        if mode == 'temporal':
+            options['temporalGroups'] = [{'frameIndex': 17, 'images': [still()]}]
+    parts = node_run(NODE_SERIALIZE, options)
+    assert not any(part['field'] == 'seconds' for part in parts)
+    files = [(part['field'], (part['name'], base64.b64decode(part['data']), part['type'])
+              if 'data' in part else (None, part['value'])) for part in parts]
+    with TestClient(create_app(settings=settings, comfy=backend, comfy_video=backend)) as client:
+        response = client.post('/v1/videos', files=files)
+        assert response.status_code == 200, response.text
+        assert response.json()['frames'] == 141
+    assert next(node['inputs']['noise_seed'] for node in backend.submitted_graph.values()
+                if node['class_type'] == 'RandomNoise') == 2**64-1
+    assert len(backend.uploaded) == {'text': 0, 'image': 1, 'semantic': 1, 'temporal': 2}[mode]
+
+
+NODE_AUDIO = r'''
+const {pathToFileURL} = await import('node:url');
+const {readFileSync} = await import('node:fs');
+const {generateAudio} = await import(new URL('./audio.js', pathToFileURL(process.argv[1])).href);
+const input = JSON.parse(readFileSync(0, 'utf8'));
+let payload, calls = 0;
+await generateAudio(input.kind, input.args, {baseUrl:'https://easel.test', fetchImpl:async(url,init)=>{
+  if(url !== 'https://easel.test/v1/audio/generations' || init.method !== 'POST') throw new Error('unexpected request');
+  calls++; payload = JSON.parse(init.body); return Response.json({status:'submitted'});
+}});
+if(calls !== 1) throw new Error('submit exactly once');
+process.stdout.write(JSON.stringify(payload));
+'''
+
+
+@pytest.mark.parametrize('kind,args', [
+    ('music', {'prompt': 'jazz', 'lyrics': 'hello', 'title': 'Test', 'sunoModel': 'v5',
+               'weirdness': 20, 'styleInfluence': 60, 'durationSeconds': 120, 'dryRun': True}),
+    ('music', {'prompt': 'jazz', 'referenceAudioId': '11111111-1111-4111-8111-111111111111',
+               'inspirationIds': [], 'dryRun': True}),
+    ('music', {'prompt': 'jazz', 'inspirationPlaylist': 'playlist',
+               'inspirationIds': [], 'dryRun': True}),
+    ('speech', {'prompt': 'Hello', 'tone': 'warm', 'backgroundMusic': True,
+                'vocalGender': 'female', 'variety': 2, 'dryRun': True}),
+    ('sound', {'prompt': 'rain', 'soundType': 'loop', 'bpm': 100, 'dryRun': True}),
+])
+async def test_audio_mcp_payload_reaches_actual_easel_api(audio_client, kind, args):
+    client, backend = audio_client
+    payload = node_run(NODE_AUDIO, {'kind': kind, 'args': args})
+    response = await client.post('/v1/audio/generations', json=payload)
+    assert response.status_code == 202, response.text
+    assert response.json()['model'] == 'suno-' + kind
+    assert backend.calls[-1].url.path == '/api/v1/generate/' + kind
+    assert json.loads(backend.calls[-1].content)['dry_run'] is True
+
+
+def test_mcp_audio_schema_covers_every_api_request_field():
+    import re
+    from easel.audio_api import MusicGeneration, SpeechGeneration, SoundGeneration
+    script = r'''
+const {pathToFileURL} = await import('node:url');
+const schemas = await import(new URL('./audio.js', pathToFileURL(process.argv[1])).href);
+process.stdout.write(JSON.stringify(Object.fromEntries(['Music','Speech','Sound'].map(kind=>
+  [kind, Object.keys(schemas[kind+'InputSchema'].shape)]))));
+'''
+    fields = node_run(script, {})
+    for kind, model in [('Music', MusicGeneration), ('Speech', SpeechGeneration), ('Sound', SoundGeneration)]:
+        wire = {re.sub(r'([A-Z])', lambda match: '_' + match[1].lower(), field) for field in fields[kind]}
+        assert wire == set(model.model_fields)

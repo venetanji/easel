@@ -1,0 +1,1945 @@
+{
+  "started_at": "2026-10-08T16:06:15.486767+00:00",
+  "base_url": "https://easel.ait4x.org",
+  "requests": [
+    {
+      "kind": "image",
+      "index": 0,
+      "submitted_at": "2026-10-08T16:06:16.497961+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475576_8046f31fd0234e1cad5ab9df406a077e",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475576,
+        "expires_at": 1791561976,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 0,
+        "queue_ahead": 0,
+        "running": 1,
+        "pending": 0,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": null,
+        "estimated_completion_at": null
+      },
+      "acceptance_seconds": 0.415,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475576_8046f31fd0234e1cad5ab9df406a077e",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475576,
+        "expires_at": 1791561976,
+        "completed_at": 1791475586,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 16,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475586,
+        "created": 1791475576,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475576_8046f31fd0234e1cad5ab9df406a077e/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:03.816605+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 235450,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 9.703
+    },
+    {
+      "kind": "image",
+      "index": 1,
+      "submitted_at": "2026-10-08T16:06:16.498286+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475576_6b9497ca01894a3c85484b2d8939f7ce",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475576,
+        "expires_at": 1791561976,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 1,
+        "queue_ahead": 1,
+        "running": 1,
+        "pending": 1,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": 38,
+        "estimated_completion_at": 1791475614
+      },
+      "acceptance_seconds": 0.422,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475576_6b9497ca01894a3c85484b2d8939f7ce",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475576,
+        "expires_at": 1791561976,
+        "completed_at": 1791475593,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 16,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475593,
+        "created": 1791475576,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475576_6b9497ca01894a3c85484b2d8939f7ce/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:05.309528+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 259785,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 6.903
+    },
+    {
+      "kind": "image",
+      "index": 7,
+      "submitted_at": "2026-10-08T16:06:16.500025+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475577_53a2e2a8a85841888f3f15eae7132567",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 2,
+        "queue_ahead": 2,
+        "running": 1,
+        "pending": 2,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": 56,
+        "estimated_completion_at": 1791475633
+      },
+      "acceptance_seconds": 0.797,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475577_53a2e2a8a85841888f3f15eae7132567",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": 1791475600,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 16,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475600,
+        "created": 1791475577,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475577_53a2e2a8a85841888f3f15eae7132567/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:06.801636+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 245859,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 6.626
+    },
+    {
+      "kind": "image",
+      "index": 4,
+      "submitted_at": "2026-10-08T16:06:16.499031+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475577_f42f92194d784c0c803468d9532ea71a",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 3,
+        "queue_ahead": 3,
+        "running": 1,
+        "pending": 3,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": 75,
+        "estimated_completion_at": 1791475652
+      },
+      "acceptance_seconds": 0.835,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475577_f42f92194d784c0c803468d9532ea71a",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": 1791475605,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 16,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475605,
+        "created": 1791475577,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475577_f42f92194d784c0c803468d9532ea71a/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:08.296966+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 300761,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 5.162
+    },
+    {
+      "kind": "image",
+      "index": 5,
+      "submitted_at": "2026-10-08T16:06:16.499353+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475577_f4fbe690f09e4cb6bfd0b3969a26cbe1",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 4,
+        "queue_ahead": 4,
+        "running": 1,
+        "pending": 4,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": 94,
+        "estimated_completion_at": 1791475671
+      },
+      "acceptance_seconds": 0.974,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475577_f4fbe690f09e4cb6bfd0b3969a26cbe1",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": 1791475612,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 15,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475612,
+        "created": 1791475577,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475577_f4fbe690f09e4cb6bfd0b3969a26cbe1/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:09.784548+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 253538,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 6.195
+    },
+    {
+      "kind": "video",
+      "index": 2,
+      "submitted_at": "2026-10-08T16:06:16.502187+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_e48be902-88f8-4d07-9ffb-60248c32e882",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 0.995,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_e48be902-88f8-4d07-9ffb-60248c32e882",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475603,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:07:11.280643+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 59224,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 26.665
+    },
+    {
+      "kind": "image",
+      "index": 10,
+      "submitted_at": "2026-10-08T16:06:16.501089+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475577_e028ac67a561448dbfc5c3a01f630aad",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 5,
+        "queue_ahead": 5,
+        "running": 1,
+        "pending": 5,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": 113,
+        "estimated_completion_at": 1791475690
+      },
+      "acceptance_seconds": 1.028,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475577_e028ac67a561448dbfc5c3a01f630aad",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": 1791475617,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 15,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475617,
+        "created": 1791475577,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475577_e028ac67a561448dbfc5c3a01f630aad/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:12.402777+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 319183,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 5.583
+    },
+    {
+      "kind": "image",
+      "index": 8,
+      "submitted_at": "2026-10-08T16:06:16.500355+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475577_c960a6139c8142d0b454daa17987f829",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 6,
+        "queue_ahead": 6,
+        "running": 1,
+        "pending": 6,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": 132,
+        "estimated_completion_at": 1791475709
+      },
+      "acceptance_seconds": 1.061,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475577_c960a6139c8142d0b454daa17987f829",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": 1791475623,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 15,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475623,
+        "created": 1791475577,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475577_c960a6139c8142d0b454daa17987f829/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:13.898430+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 251638,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 5.807
+    },
+    {
+      "kind": "image",
+      "index": 6,
+      "submitted_at": "2026-10-08T16:06:16.499673+00:00",
+      "http_status": 202,
+      "retry_after": "2",
+      "receipt": {
+        "id": "image_job_1791475577_beafad89b0904e21a241f8a0cac146fa",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "queued",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": null,
+        "progress": null,
+        "error": null,
+        "queue_position": 7,
+        "queue_ahead": 7,
+        "running": 1,
+        "pending": 7,
+        "average_generation_seconds": 19,
+        "estimated_wait_seconds": 151,
+        "estimated_completion_at": 1791475728
+      },
+      "acceptance_seconds": 1.137,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "image_job_1791475577_beafad89b0904e21a241f8a0cac146fa",
+        "object": "image_job",
+        "model": "qwen-image-2.1",
+        "status": "completed",
+        "created_at": 1791475577,
+        "expires_at": 1791561977,
+        "completed_at": 1791475629,
+        "progress": 100,
+        "error": null,
+        "queue_position": null,
+        "queue_ahead": 0,
+        "running": null,
+        "pending": null,
+        "average_generation_seconds": 15,
+        "estimated_wait_seconds": 0,
+        "estimated_completion_at": 1791475629,
+        "created": 1791475577,
+        "data": [
+          {
+            "url": "http://easel.tail.ait4x.org/v1/images/jobs/image_job_1791475577_beafad89b0904e21a241f8a0cac146fa/content/0"
+          }
+        ]
+      },
+      "observed_terminal_at": "2026-10-08T16:07:15.386969+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 200339,
+        "content_type": "image/png"
+      },
+      "backend_execution_seconds": 5.194
+    },
+    {
+      "kind": "image",
+      "index": 9,
+      "submitted_at": "2026-10-08T16:06:16.500760+00:00",
+      "http_status": 429,
+      "retry_after": "5",
+      "receipt": {
+        "error": {
+          "message": "image queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "queue_full",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.137
+    },
+    {
+      "kind": "image",
+      "index": 2,
+      "submitted_at": "2026-10-08T16:06:16.498541+00:00",
+      "http_status": 429,
+      "retry_after": "5",
+      "receipt": {
+        "error": {
+          "message": "image queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "queue_full",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.14
+    },
+    {
+      "kind": "image",
+      "index": 11,
+      "submitted_at": "2026-10-08T16:06:16.501342+00:00",
+      "http_status": 429,
+      "retry_after": "5",
+      "receipt": {
+        "error": {
+          "message": "image queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "queue_full",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.138
+    },
+    {
+      "kind": "video",
+      "index": 6,
+      "submitted_at": "2026-10-08T16:06:16.503210+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_1fecec79-1c76-4940-b844-d4db02d4d78a",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 1.138,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_1fecec79-1c76-4940-b844-d4db02d4d78a",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475627,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:07:16.876284+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 90725,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 23.605
+    },
+    {
+      "kind": "image",
+      "index": 3,
+      "submitted_at": "2026-10-08T16:06:16.498790+00:00",
+      "http_status": 429,
+      "retry_after": "5",
+      "receipt": {
+        "error": {
+          "message": "image queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "queue_full",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.144
+    },
+    {
+      "kind": "video",
+      "index": 9,
+      "submitted_at": "2026-10-08T16:06:16.503932+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_f6f6fcc6-9373-46b2-9128-3c6591d88a1c",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 1.144,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_f6f6fcc6-9373-46b2-9128-3c6591d88a1c",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475650,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:07:34.334968+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 51446,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 21.627
+    },
+    {
+      "kind": "video",
+      "index": 8,
+      "submitted_at": "2026-10-08T16:06:16.503691+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_422b9d65-e978-4421-85ac-844a2e79b507",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 1.154,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_422b9d65-e978-4421-85ac-844a2e79b507",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475671,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:07:55.746445+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 69581,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 21.421
+    },
+    {
+      "kind": "video",
+      "index": 1,
+      "submitted_at": "2026-10-08T16:06:16.501934+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_bf01bf5f-fd4c-452b-96ae-ded5dd3dcae7",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 1.158,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_bf01bf5f-fd4c-452b-96ae-ded5dd3dcae7",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475692,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:08:15.285815+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 54882,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 20.411
+    },
+    {
+      "kind": "video",
+      "index": 7,
+      "submitted_at": "2026-10-08T16:06:16.503449+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_24260484-b452-4c7d-8edf-677fda175060",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 1.168,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_24260484-b452-4c7d-8edf-677fda175060",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475713,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:08:37.546396+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 72578,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 20.267
+    },
+    {
+      "kind": "video",
+      "index": 5,
+      "submitted_at": "2026-10-08T16:06:16.502975+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_c60cb9e6-0684-4eda-a2f3-2861c002e773",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 1.173,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_c60cb9e6-0684-4eda-a2f3-2861c002e773",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475733,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:08:54.782499+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 63682,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 19.549
+    },
+    {
+      "kind": "video",
+      "index": 11,
+      "submitted_at": "2026-10-08T16:06:16.504408+00:00",
+      "http_status": 200,
+      "retry_after": null,
+      "receipt": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_01358a3c-439e-46d2-b4dc-9b17897325b8",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "queued",
+        "completed_at": null,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 0
+      },
+      "acceptance_seconds": 1.183,
+      "last_poll_http_status": 200,
+      "final": {
+        "id": "video_1791475577_bHR4LTIuNQ:25:512x320_01358a3c-439e-46d2-b4dc-9b17897325b8",
+        "frames": 25,
+        "fps": 24,
+        "duration": 1.0416666666666667,
+        "size": "512x320",
+        "object": "video",
+        "created_at": 1791475577,
+        "status": "completed",
+        "completed_at": 1791475753,
+        "expires_at": 1791561977,
+        "error": null,
+        "model": "ltx-2.5",
+        "progress": 100
+      },
+      "observed_terminal_at": "2026-10-08T16:09:16.534515+00:00",
+      "output": {
+        "http_status": 200,
+        "bytes": 85672,
+        "content_type": "video/mp4"
+      },
+      "backend_execution_seconds": 20.31
+    },
+    {
+      "kind": "video",
+      "index": 10,
+      "submitted_at": "2026-10-08T16:06:16.504172+00:00",
+      "http_status": 429,
+      "retry_after": "10",
+      "receipt": {
+        "error": {
+          "message": "backend queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "rate_limit_exceeded",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.191
+    },
+    {
+      "kind": "video",
+      "index": 3,
+      "submitted_at": "2026-10-08T16:06:16.502427+00:00",
+      "http_status": 429,
+      "retry_after": "10",
+      "receipt": {
+        "error": {
+          "message": "backend queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "rate_limit_exceeded",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.203
+    },
+    {
+      "kind": "video",
+      "index": 4,
+      "submitted_at": "2026-10-08T16:06:16.502699+00:00",
+      "http_status": 429,
+      "retry_after": "10",
+      "receipt": {
+        "error": {
+          "message": "backend queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "rate_limit_exceeded",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.206
+    },
+    {
+      "kind": "video",
+      "index": 0,
+      "submitted_at": "2026-10-08T16:06:16.501593+00:00",
+      "http_status": 429,
+      "retry_after": "10",
+      "receipt": {
+        "error": {
+          "message": "backend queue is full; retry shortly",
+          "type": "rate_limit_error",
+          "code": "rate_limit_exceeded",
+          "param": null
+        }
+      },
+      "acceptance_seconds": 1.213
+    },
+    {
+      "kind": "audio",
+      "index": 1,
+      "submitted_at": "2026-10-08T16:06:16.505149+00:00",
+      "http_status": 202,
+      "retry_after": "5",
+      "receipt": {
+        "attempt_id": "220e3c26-2e57-4888-b08e-9875c717e131",
+        "status": "submitted",
+        "songs": [
+          {
+            "id": "ee460de8-ad8c-4426-ba0f-576afbcccd26",
+            "title": "Easel capacity audit 1",
+            "status": "submitted",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/ee460de8-ad8c-4426-ba0f-576afbcccd26",
+            "duration": null,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/ee460de8-ad8c-4426-ba0f-576afbcccd26/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/ee460de8-ad8c-4426-ba0f-576afbcccd26/download"
+          },
+          {
+            "id": "73cec657-edb4-4851-a9c6-f306449be4b7",
+            "title": "Easel capacity audit 1",
+            "status": "submitted",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/73cec657-edb4-4851-a9c6-f306449be4b7",
+            "duration": null,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/73cec657-edb4-4851-a9c6-f306449be4b7/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/73cec657-edb4-4851-a9c6-f306449be4b7/download"
+          }
+        ],
+        "captcha_detected": false,
+        "message": "Generation accepted. Use get_song to check completion and download_song to save audio.",
+        "submitted_options": {
+          "generation_type": "TEXT",
+          "title": "Easel capacity audit 1",
+          "tags": "Short mellow acoustic instrumental, gentle guitar and light percussion",
+          "negative_tags": "",
+          "mv": "chirp-goose",
+          "prompt": "",
+          "make_instrumental": true,
+          "metadata": {
+            "is_max_mode": false,
+            "is_mumble": false,
+            "create_mode": "custom",
+            "control_sliders": {
+              "aug_creativity": 1
+            }
+          },
+          "override_fields": {},
+          "cover_clip_id": null,
+          "continue_clip_id": null,
+          "continue_at": null
+        },
+        "metrics": {
+          "attempts": 3,
+          "captcha_attempts": 0,
+          "captcha_challenges": 0
+        },
+        "operations": {
+          "active_operation": "generate_song",
+          "queued": 1,
+          "queue_capacity": 8,
+          "queue_timeout_seconds": 15.0,
+          "operation_timeout_seconds": 120.0
+        },
+        "browser": {
+          "connected": true,
+          "open_pages": 1
+        },
+        "object": "audio.generation",
+        "status_url": "http://easel.tail.ait4x.org/v1/audio/generations/status",
+        "model": "suno-music"
+      },
+      "acceptance_seconds": 10.527,
+      "tracks": [
+        {
+          "http_status": 200,
+          "body": {
+            "id": "ee460de8-ad8c-4426-ba0f-576afbcccd26",
+            "title": "Easel capacity audit 1",
+            "status": "complete",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/ee460de8-ad8c-4426-ba0f-576afbcccd26",
+            "duration": 29.96,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/ee460de8-ad8c-4426-ba0f-576afbcccd26/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/ee460de8-ad8c-4426-ba0f-576afbcccd26/download"
+          }
+        },
+        {
+          "http_status": 200,
+          "body": {
+            "id": "73cec657-edb4-4851-a9c6-f306449be4b7",
+            "title": "Easel capacity audit 1",
+            "status": "complete",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/73cec657-edb4-4851-a9c6-f306449be4b7",
+            "duration": 28.76,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/73cec657-edb4-4851-a9c6-f306449be4b7/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/73cec657-edb4-4851-a9c6-f306449be4b7/download"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "audio",
+      "index": 0,
+      "submitted_at": "2026-10-08T16:06:16.504914+00:00",
+      "http_status": 202,
+      "retry_after": "5",
+      "receipt": {
+        "attempt_id": "f75a2b25-7d6f-40bb-a4d7-eb5bb8fa9b04",
+        "status": "submitted",
+        "songs": [
+          {
+            "id": "117a80c2-559d-4578-90bd-845755c70710",
+            "title": "Easel capacity audit 0",
+            "status": "submitted",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/117a80c2-559d-4578-90bd-845755c70710",
+            "duration": null,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/117a80c2-559d-4578-90bd-845755c70710/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/117a80c2-559d-4578-90bd-845755c70710/download"
+          },
+          {
+            "id": "513637fc-2a4c-44c2-94ed-65ccb6469476",
+            "title": "Easel capacity audit 0",
+            "status": "submitted",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/513637fc-2a4c-44c2-94ed-65ccb6469476",
+            "duration": null,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/513637fc-2a4c-44c2-94ed-65ccb6469476/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/513637fc-2a4c-44c2-94ed-65ccb6469476/download"
+          }
+        ],
+        "captcha_detected": false,
+        "message": "Generation accepted. Use get_song to check completion and download_song to save audio.",
+        "submitted_options": {
+          "generation_type": "TEXT",
+          "title": "Easel capacity audit 0",
+          "tags": "Short mellow acoustic instrumental, gentle guitar and light percussion",
+          "negative_tags": "",
+          "mv": "chirp-goose",
+          "prompt": "",
+          "make_instrumental": true,
+          "metadata": {
+            "is_max_mode": false,
+            "is_mumble": false,
+            "create_mode": "custom",
+            "control_sliders": {
+              "aug_creativity": 1
+            }
+          },
+          "override_fields": {},
+          "cover_clip_id": null,
+          "continue_clip_id": null,
+          "continue_at": null
+        },
+        "metrics": {
+          "attempts": 4,
+          "captcha_attempts": 0,
+          "captcha_challenges": 0
+        },
+        "operations": {
+          "active_operation": "generate_song",
+          "queued": 0,
+          "queue_capacity": 8,
+          "queue_timeout_seconds": 15.0,
+          "operation_timeout_seconds": 120.0
+        },
+        "browser": {
+          "connected": true,
+          "open_pages": 1
+        },
+        "object": "audio.generation",
+        "status_url": "http://easel.tail.ait4x.org/v1/audio/generations/status",
+        "model": "suno-music"
+      },
+      "acceptance_seconds": 17.015,
+      "tracks": [
+        {
+          "http_status": 200,
+          "body": {
+            "id": "117a80c2-559d-4578-90bd-845755c70710",
+            "title": "Easel capacity audit 0",
+            "status": "complete",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/117a80c2-559d-4578-90bd-845755c70710",
+            "duration": 29.96,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/117a80c2-559d-4578-90bd-845755c70710/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/117a80c2-559d-4578-90bd-845755c70710/download"
+          }
+        },
+        {
+          "http_status": 200,
+          "body": {
+            "id": "513637fc-2a4c-44c2-94ed-65ccb6469476",
+            "title": "Easel capacity audit 0",
+            "status": "complete",
+            "entity_type": "song_schema",
+            "model_name": "chirp-goose",
+            "preview_url": "https://suno.com/song/513637fc-2a4c-44c2-94ed-65ccb6469476",
+            "duration": 29.8,
+            "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/513637fc-2a4c-44c2-94ed-65ccb6469476/content",
+            "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/513637fc-2a4c-44c2-94ed-65ccb6469476/download"
+          }
+        }
+      ]
+    }
+  ],
+  "health": [
+    {
+      "http_status": 200,
+      "seconds": 0.955
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.37
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.37
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.744
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.376
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.37
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.371
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.37
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.371
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.37
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.375
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.371
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.371
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.374
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.371
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.365
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.365
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.365
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.371
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.749
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.374
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.749
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.373
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.372
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.368
+    },
+    {
+      "http_status": 200,
+      "seconds": 0.369
+    }
+  ],
+  "parameters": {
+    "images": 12,
+    "videos": 12,
+    "audio": 2,
+    "image_size": "512x512",
+    "image_steps": 25,
+    "video_size": "512x320",
+    "video_seconds": 1
+  },
+  "audio_before": {
+    "status": "complete",
+    "attempt_id": "3415e983-94ab-43ab-b683-b8d8816437cc",
+    "recovery_required": null
+  },
+  "submissions_complete_at": "2026-10-08T16:06:33.520558+00:00",
+  "before_easel_restart": {
+    "image": {
+      "queue_running": [
+        "04dcbb0b-9db9-4ead-9619-b013b4b8e13a"
+      ],
+      "queue_pending": [
+        "d3980635-119d-45a9-8282-fa48d26f5b35"
+      ]
+    },
+    "video": {
+      "queue_running": [
+        "1fecec79-1c76-4940-b844-d4db02d4d78a"
+      ],
+      "queue_pending": [
+        "f6f6fcc6-9373-46b2-9128-3c6591d88a1c",
+        "bf01bf5f-fd4c-452b-96ae-ded5dd3dcae7",
+        "422b9d65-e978-4421-85ac-844a2e79b507",
+        "01358a3c-439e-46d2-b4dc-9b17897325b8",
+        "24260484-b452-4c7d-8edf-677fda175060",
+        "c60cb9e6-0684-4eda-a2f3-2861c002e773"
+      ]
+    }
+  },
+  "audio_after": {
+    "attempt_id": "f75a2b25-7d6f-40bb-a4d7-eb5bb8fa9b04",
+    "status": "complete",
+    "songs": [
+      {
+        "id": "117a80c2-559d-4578-90bd-845755c70710",
+        "title": "Easel capacity audit 0",
+        "status": "complete",
+        "entity_type": "song_schema",
+        "model_name": "chirp-goose",
+        "preview_url": "https://suno.com/song/117a80c2-559d-4578-90bd-845755c70710",
+        "duration": 29.96,
+        "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/117a80c2-559d-4578-90bd-845755c70710/content",
+        "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/117a80c2-559d-4578-90bd-845755c70710/download"
+      },
+      {
+        "id": "513637fc-2a4c-44c2-94ed-65ccb6469476",
+        "title": "Easel capacity audit 0",
+        "status": "complete",
+        "entity_type": "song_schema",
+        "model_name": "chirp-goose",
+        "preview_url": "https://suno.com/song/513637fc-2a4c-44c2-94ed-65ccb6469476",
+        "duration": 29.8,
+        "audio_url": "http://easel.tail.ait4x.org/v1/audio/tracks/513637fc-2a4c-44c2-94ed-65ccb6469476/content",
+        "download_url": "http://easel.tail.ait4x.org/v1/audio/tracks/513637fc-2a4c-44c2-94ed-65ccb6469476/download"
+      }
+    ],
+    "captcha_detected": false,
+    "message": "Generation complete. Tracks are ready for preview and playback-audio downloads.",
+    "submitted_options": {
+      "generation_type": "TEXT",
+      "title": "Easel capacity audit 0",
+      "tags": "Short mellow acoustic instrumental, gentle guitar and light percussion",
+      "negative_tags": "",
+      "mv": "chirp-goose",
+      "prompt": "",
+      "make_instrumental": true,
+      "metadata": {
+        "is_max_mode": false,
+        "is_mumble": false,
+        "create_mode": "custom",
+        "control_sliders": {
+          "aug_creativity": 1
+        }
+      },
+      "override_fields": {},
+      "cover_clip_id": null,
+      "continue_clip_id": null,
+      "continue_at": null
+    },
+    "metrics": {
+      "attempts": 4,
+      "captcha_attempts": 0,
+      "captcha_challenges": 0
+    },
+    "operations": {
+      "active_operation": null,
+      "queued": 0,
+      "queue_capacity": 8,
+      "queue_timeout_seconds": 15.0,
+      "operation_timeout_seconds": 120.0
+    },
+    "browser": {
+      "connected": true,
+      "open_pages": 1
+    },
+    "object": "audio.generation",
+    "status_url": "http://easel.tail.ait4x.org/v1/audio/generations/status"
+  },
+  "polling_finished_at": "2026-10-08T16:09:22.481964+00:00",
+  "unfinished_gpu_jobs": [],
+  "media_validation": [
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/117a80c2-559d-4578-90bd-845755c70710.m4a",
+      "bytes": 562123,
+      "kind": "audio",
+      "duration": "29.966500",
+      "streams": [
+        {
+          "codec_type": "audio",
+          "codec_name": "opus",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": null,
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/513637fc-2a4c-44c2-94ed-65ccb6469476.m4a",
+      "bytes": 573963,
+      "kind": "audio",
+      "duration": "29.806500",
+      "streams": [
+        {
+          "codec_type": "audio",
+          "codec_name": "opus",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": null,
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/73cec657-edb4-4851-a9c6-f306449be4b7.m4a",
+      "bytes": 542290,
+      "kind": "audio",
+      "duration": "28.766500",
+      "streams": [
+        {
+          "codec_type": "audio",
+          "codec_name": "opus",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": null,
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/ee460de8-ad8c-4426-ba0f-576afbcccd26.m4a",
+      "bytes": 567485,
+      "kind": "audio",
+      "duration": "29.966500",
+      "streams": [
+        {
+          "codec_type": "audio",
+          "codec_name": "opus",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": null,
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-0.png",
+      "bytes": 235450,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-1.png",
+      "bytes": 259785,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-10.png",
+      "bytes": 319183,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-4.png",
+      "bytes": 300761,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-5.png",
+      "bytes": 253538,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-6.png",
+      "bytes": 200339,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-7.png",
+      "bytes": 245859,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/image-8.png",
+      "bytes": 251638,
+      "kind": "image",
+      "width": 512,
+      "height": 512,
+      "format": "PNG"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-1.mp4",
+      "bytes": 54882,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-11.mp4",
+      "bytes": 85672,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-2.mp4",
+      "bytes": 59224,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-5.mp4",
+      "bytes": 63682,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-6.mp4",
+      "bytes": 90725,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-7.mp4",
+      "bytes": 72578,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-8.mp4",
+      "bytes": 69581,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    },
+    {
+      "filename": "/tmp/easel-capacity-media-2026-10-09/video-9.mp4",
+      "bytes": 51446,
+      "kind": "video",
+      "duration": "1.041667",
+      "streams": [
+        {
+          "codec_type": "video",
+          "codec_name": "h264",
+          "width": 512,
+          "height": 320,
+          "avg_frame_rate": "24/1",
+          "nb_frames": "25",
+          "sample_rate": null
+        },
+        {
+          "codec_type": "audio",
+          "codec_name": "aac",
+          "width": null,
+          "height": null,
+          "avg_frame_rate": "0/0",
+          "nb_frames": "49",
+          "sample_rate": "48000"
+        }
+      ],
+      "full_decode": "passed"
+    }
+  ],
+  "backend_execution": {
+    "image": {
+      "samples": [
+        9.703,
+        6.903,
+        6.626,
+        5.162,
+        6.195,
+        5.583,
+        5.807,
+        5.194
+      ],
+      "median_seconds": 6.001,
+      "total_seconds": 51.173
+    },
+    "video": {
+      "samples": [
+        26.665,
+        23.605,
+        21.627,
+        21.421,
+        20.411,
+        20.267,
+        19.549,
+        20.31
+      ],
+      "median_seconds": 20.916,
+      "total_seconds": 173.855
+    }
+  }
+}
