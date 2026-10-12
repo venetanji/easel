@@ -11,6 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.background import BackgroundTask
 
 from .errors import APIError
+from .api_docs import ROUTE_DOCS
 
 AUDIO_MODELS = ("suno-music", "suno-speech", "suno-sound")
 
@@ -130,13 +131,13 @@ def _generation(data: dict, request: Request) -> dict:
     return result
 
 
-def register_audio_routes(app, require_auth) -> None:
+def register_audio_routes(app, require_auth, auth_docs=()) -> None:
     def authenticate(request: Request):
         require_auth(request.app.state.settings, request)
 
-    router = APIRouter(prefix="/v1/audio", tags=["Audio"], dependencies=[Depends(authenticate)])
+    router = APIRouter(prefix="/v1/audio", dependencies=[*auth_docs, Depends(authenticate)])
 
-    @router.post("/generations")
+    @router.post("/generations", **ROUTE_DOCS[("POST", "/v1/audio/generations")])
     async def generate(request: Request, body: MusicGeneration | SpeechGeneration | SoundGeneration):
         suno = _suno(request)
         if not body.prompt.strip() and not getattr(body, "lyrics", "").strip():
@@ -156,29 +157,29 @@ def register_audio_routes(app, require_auth) -> None:
         headers = {"Location": result["status_url"], "Retry-After": "5"} if status == 202 else None
         return JSONResponse(result, status_code=status, headers=headers)
 
-    @router.get("/generations/status")
+    @router.get("/generations/status", **ROUTE_DOCS[("GET", "/v1/audio/generations/status")])
     async def generation_status(request: Request):
         data, _status = await _suno(request).request("GET", "generation/status")
         return _generation(data, request)
 
-    @router.post("/generations/abandon")
+    @router.post("/generations/abandon", **ROUTE_DOCS[("POST", "/v1/audio/generations/abandon")])
     async def abandon(request: Request, body: AbandonGeneration):
         data, status = await _while_connected(request, _suno(request).request(
             "POST", "generation/abandon", json=body.model_dump(mode="json"),
         ))
         return JSONResponse(_generation(data, request), status_code=status)
 
-    @router.get("/tracks/{song_id}")
+    @router.get("/tracks/{song_id}", **ROUTE_DOCS[("GET", "/v1/audio/tracks/{song_id}")])
     async def track(request: Request, song_id: UUID):
         data, _status = await _while_connected(request, _suno(request).request("GET", f"songs/{song_id}"))
         return _track_urls(data, request)
 
-    @router.post("/tracks/{song_id}/download")
+    @router.post("/tracks/{song_id}/download", **ROUTE_DOCS[("POST", "/v1/audio/tracks/{song_id}/download")])
     async def download_track(request: Request, song_id: UUID):
         data, status = await _while_connected(request, _suno(request).request("POST", f"songs/{song_id}/download"))
         return JSONResponse(_track_urls(data, request), status_code=status)
 
-    @router.get("/tracks/{song_id}/content")
+    @router.get("/tracks/{song_id}/content", **ROUTE_DOCS[("GET", "/v1/audio/tracks/{song_id}/content")])
     async def audio_content(request: Request, song_id: UUID, download: bool = False):
         upstream = await _suno(request).audio(
             str(song_id), download=download,
