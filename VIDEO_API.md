@@ -23,6 +23,7 @@ points to `comfy-docker-tailscale-serve-video-1` on `tailscale-mesh`.
 | `seconds` | no | Whole number from `1` through `12` (default `4`), subject to the size-duration budget |
 | `size` | no | Custom `WIDTHxHEIGHT`, each dimension a multiple of 64 in `256..2048`; discover presets and per-size durations through capabilities (default `1280x720`) |
 | `input_reference` | no | PNG, JPEG, or WebP image for image-to-video generation |
+| `source_audio` | no | WAV, MP3, FLAC, Ogg or M4A file, at most 32 MiB; must cover the rendered duration |
 | `camera_lora` | no | `dolly-in`, `dolly-out`, `dolly-left`, `dolly-right`, `jib-up`, `jib-down`, `static` |
 | `camera_lora_strength` | no | Finite `0` through `2`, default `0.8`; requires `camera_lora` |
 | `loras` | no | JSON string of registered `id` / optional `strength` objects; at most four adapters including `camera_lora` |
@@ -64,6 +65,7 @@ The same `POST /v1/videos` endpoint accepts these H3 multipart fields:
 | `size` | no | Custom `WIDTHxHEIGHT`, each dimension a multiple of 32 in `256..2048`, subject to the shared size-duration budget; default `864x480` |
 | `seed` | no | Unsigned decimal integer `0..18446744073709551615`, default `0`; JavaScript must send an exact decimal string |
 | `input_reference` | no | One PNG/JPEG still for FL8 first-frame image to video |
+| `source_audio` | no | WAV, MP3, FLAC, Ogg or M4A soundtrack; pair with `input_reference` for image+audio-to-video |
 | `images` | no | Repeated PNG/JPEG still uploads indexed by metadata in this request |
 | `semantic_references` | no | JSON array of one or two `{"image_index":0}` objects referring to `images` |
 | `temporal_groups` | no | JSON array of one through three `{"frame_index":0,"image_indices":[0,1,2,3,4]}` objects referring to `images` |
@@ -93,8 +95,46 @@ H3 always outputs 24 FPS. Duration is exactly `frames/24` (the default is
 `124/24`, approximately 5.166667 seconds). Explicit `seconds` is rejected,
 including an explicitly supplied LTX default; H3 never silently maps or rounds
 LTX durations. H3 also rejects WebP, LTX camera/Ingredients/motion controls,
-source-audio guidance, control video, guide strengths, negative/CFG controls
+control video, guide strengths, negative/CFG controls
 and custom sampling parameters.
+
+## Supplied soundtrack (both models)
+
+Send `source_audio` as a file upload, not a path, URL, Suno track ID or JSON
+string. It conditions generation and replaces the generated soundtrack in the
+saved video. It can accompany text, a first-frame image, or the model's existing
+reference/temporal-guide controls; omitting it preserves generated audio.
+
+Uploads are capped at 32 MiB independently of image-upload limits. Easel uses
+local ffprobe/ffmpeg with network protocols and playlist formats disabled,
+checks the first audio stream, and decodes it to 48 kHz stereo PCM WAV before
+queue admission or any upload. Sources may have up to eight channels and a
+sample rate up to 192 kHz. Each decoder subprocess has a 15-second limit.
+Client filenames are discarded. Docker installs ffmpeg; host installs must
+provide both `ffmpeg` and `ffprobe` on PATH.
+
+Audio starts at zero and must cover the full rendered duration: `(seconds*24+1)/24`
+for LTX, or `frames/24` for H3. Longer tracks are trimmed; short, corrupt,
+empty, oversized or mismatched-MIME inputs are rejected without uploading or
+submitting. `application/octet-stream` is accepted with safe format detection.
+
+LTX VAE-encodes the supplied audio, freezes its noise mask, and restores that
+original encoding for the refinement pass. H3 uses native `MiniMaxH3AddGuide`
+with its audio VAE and the original AV latent. Both embed the normalized source
+audio rather than audio reconstructed by the model. Discover
+`source_audio.available` first; missing nodes or decoders fail closed.
+Source-audio paths are graph-contract-tested; no new GPU or lip-sync quality
+validation is implied.
+
+```sh
+curl "$EASEL_URL/v1/videos" \
+  -H "Authorization: Bearer $EASEL_API_KEY" \
+  -F 'model=minimax-h3' \
+  -F 'prompt=A person sings to camera' \
+  -F 'frames=124' \
+  -F 'input_reference=@portrait.png;type=image/png' \
+  -F 'source_audio=@track.mp3;type=audio/mpeg'
+```
 
 Authenticated `GET /v1/videos/capabilities?model=minimax-h3` describes the
 frame grid, size/seed bounds, typed metadata and upload limits. Each profile

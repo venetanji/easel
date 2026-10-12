@@ -109,6 +109,10 @@ submit **multipart**, not JSON, to `POST /v1/videos`:
   `seconds=4`, `size=1280x720`.
 - H3 example: `model=minimax-h3`, the same `prompt`, `frames=124`,
   `size=864x480`. **Omit `seconds` entirely** and omit LTX-only controls.
+- Both models accept `source_audio` as a WAV/MP3/FLAC/Ogg/M4A file upload
+  up to 32 MiB. Audio conditions generation and supplies the output soundtrack;
+  add `input_reference` for image+audio-to-video. Check `source_audio.available`
+  in capabilities and supply enough audio for the full rendered duration.
 
 The generated Swagger form currently reflects LTX's parameters. It does not
 expose all H3-only fields and can send LTX defaults that H3 rejects. Use a

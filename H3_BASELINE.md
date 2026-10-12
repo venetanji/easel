@@ -1,5 +1,19 @@
 # H3 and temporal-guide cloud baseline (PR #3)
 
+## Source-audio extension (12 October 2026)
+
+`build_ia2v` adds a first-frame image and supplied soundtrack to the existing
+FL8 recipe. All H3 builders also accept optional managed `audio_filename`
+inputs, including REF20 semantic/temporal modes. Native `MiniMaxH3AddGuide`
+encodes and anchors audio with the H3 audio VAE at frame zero while preserving
+the original joint AV latent and existing conditioning chain. The normalized,
+trimmed source track is muxed into the output instead of generated audio.
+The HTTP field is `source_audio`; admission, decoder dependencies, limits and
+examples are in [VIDEO_API.md](VIDEO_API.md). This extension has offline graph
+and HTTP evidence only; existing T2V pilots do not certify IA2V or lip-sync.
+
+## Original cloud baseline
+
 This branch supplies offline graphs, captured runtime contracts, and bounded
 HTTP integration for `minimax-h3` on the video backend. Qwen and LTX-2.5
 behavior and defaults are unchanged. Native runtime discovery gates each

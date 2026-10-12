@@ -170,6 +170,15 @@ ROUTE_DOCS = {
   references/temporal groups. **Omit `seconds` entirely**, even the LTX default.
   H3 rejects LTX-specific controls. Its duration is `frames / 24` seconds.
 
+Both models accept an optional `source_audio` file (WAV, MP3, FLAC, Ogg or M4A,
+at most 32 MiB). Audio must cover the full rendered duration, including LTX's
+extra frame; longer tracks are trimmed from time zero. Easel decodes the first
+audio stream to 48 kHz stereo PCM WAV before queue admission or uploads. It
+conditions generation on that audio and embeds the trimmed source soundtrack
+instead of generated audio. Add `input_reference` for image+audio-to-video.
+Read model-specific `source_audio.available` in video capabilities first;
+this path is graph-contract-tested, not a guarantee of lip-sync quality.
+
 **Swagger form limitation:** the automatically generated form below describes
 the LTX function parameters. It does not expose all H3-only fields and may send
 LTX defaults that H3 rejects. For H3, use the multipart example above with a client

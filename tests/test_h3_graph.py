@@ -175,7 +175,7 @@ def test_unsupported_family_controls_are_not_accepted():
     with pytest.raises(TypeError):
         h3.TemporalGuide(("a.png",), 0, strength=1)
     for options in ({"seconds": 5}, {"fps": 30}, {"camera_lora": "static"},
-                    {"last_frame": "a.png"}, {"audio_filename": "a.wav"}, {"steps": 4}):
+                    {"last_frame": "a.png"}, {"steps": 4}):
         with pytest.raises(TypeError):
             h3.build_t2v("test", **options)
 

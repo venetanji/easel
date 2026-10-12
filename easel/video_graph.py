@@ -34,7 +34,8 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
                   motion_speed: float | None = None,
                   ic_lora: tuple[str, float] | None = None,
                   reference_image: str | None = None, reference_strength: float = 1.0,
-                  guiding_frames: list[tuple[str, int, float]] | None = None) -> dict:
+                  guiding_frames: list[tuple[str, int, float]] | None = None,
+                  source_audio: str | None = None) -> dict:
     """Build the ComfyUI graph used by the native LTX-2.5 T2V and I2V templates."""
     if guiding_frames and (input_image or ic_lora or reference_image):
         raise ValueError("guiding frames cannot be combined with first-image or IC reference mode")
@@ -90,10 +91,19 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
             strength=0.7, bypass=False,
         )
 
-    audio = g.node(
-        "LTXVEmptyLatentAudio", frames_number=length, frame_rate=FPS,
-        batch_size=1, audio_vae=audio_vae[0],
-    )
+    original_audio = None
+    if source_audio:
+        loaded_audio = g.node("LoadAudio", audio=source_audio)
+        original_audio = g.node("TrimAudioDuration", audio=loaded_audio[0],
+                                start_index=0.0, duration=length / FPS)
+        encoded_audio = g.node("LTXVAudioVAEEncode", audio=original_audio[0], audio_vae=audio_vae[0])
+        audio_mask = g.node("SolidMask", value=0.0, width=width // 2, height=height // 2)
+        audio = g.node("SetLatentNoiseMask", samples=encoded_audio[0], mask=audio_mask[0])
+    else:
+        audio = g.node(
+            "LTXVEmptyLatentAudio", frames_number=length, frame_rate=FPS,
+            batch_size=1, audio_vae=audio_vae[0],
+        )
     # Single-image AddGuide owns resizing/cropping for each current latent size.
     # Keep uploaded images intact and do not use legacy LTX-2.3 preprocessing.
     guide_images = [(g.node("LoadImage", image=filename)[0], frame, strength)
@@ -154,7 +164,10 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
             negative=stage2_conditioning[1], vae=video_vae[0], latent=video_samples,
             image=guide_image, frame_idx=frame, strength=strength)
         video_samples = stage2_conditioning[2]
-    av_latent = g.node("LTXVConcatAVLatent", video_latent=video_samples, audio_latent=split1[1])
+    refine_audio = split1[1]
+    if original_audio:
+        refine_audio = g.node("SetLatentNoiseMask", samples=encoded_audio[0], mask=audio_mask[0])[0]
+    av_latent = g.node("LTXVConcatAVLatent", video_latent=video_samples, audio_latent=refine_audio)
 
     guider2 = g.node(
         "LTXVDualCFGGuider", model=model[0], positive=stage2_conditioning[0],
@@ -179,7 +192,7 @@ def text_to_video(*, prompt: str, seconds: int, width: int, height: int,
         "VAEDecodeTiled", samples=video_samples, vae=video_vae[0],
         tile_size=512, overlap=64, temporal_size=64, temporal_overlap=16,
     )
-    generated_audio = g.node(
+    generated_audio = original_audio or g.node(
         "LTXVAudioVAEDecode", samples=split2[1], audio_vae=audio_vae[0],
     )
     video = g.node("CreateVideo", images=frames[0], audio=generated_audio[0], fps=FPS)

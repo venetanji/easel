@@ -14,13 +14,14 @@ from starlette.datastructures import UploadFile
 from . import h3_graph as h3
 from .errors import APIError
 from .video_sizing import VideoLimits, VideoSizingError, parse_video_size
+from .source_audio import SourceAudio, source_audio_capabilities, validate_source_audio
 
 MAX_BYTES = 32 * 1024 * 1024
 MAX_PIXELS = 64_000_000
 MAX_IMAGE_PIXELS = 32_000_000
 MAX_IMAGES = 2 + 3 * 39
 FIELDS = {'model', 'prompt', 'frames', 'seed', 'size', 'input_reference',
-          'images', 'semantic_references', 'temporal_groups'}
+          'images', 'semantic_references', 'temporal_groups', 'source_audio'}
 OUTPUTS = {
     'UNETLoader': ['MODEL'], 'CLIPLoader': ['CLIP'], 'VAELoader': ['VAE'],
     'LoraLoaderModelOnly': ['MODEL'], 'MiniMaxH3SigmaShift': ['MODEL'],
@@ -31,6 +32,7 @@ OUTPUTS = {
     'KSamplerSelect': ['SAMPLER'], 'BasicScheduler': ['SIGMAS'],
     'SamplerCustomAdvanced': ['LATENT', 'LATENT'], 'VAEDecode': ['IMAGE'],
     'VAEDecodeAudio': ['AUDIO'], 'CreateVideo': ['VIDEO'], 'SaveVideo': ['VIDEO'],
+    'LoadAudio': ['AUDIO'], 'TrimAudioDuration': ['AUDIO'],
 }
 
 
@@ -57,10 +59,13 @@ class H3Request:
     references: tuple[SemanticReference, ...]
     groups: tuple[TemporalGroup, ...]
     first_frame: bool
+    source_audio: SourceAudio | None = None
 
-    def graph(self, names: tuple[str, ...] | None = None) -> dict:
+    def graph(self, names: tuple[str, ...] | None = None, audio_name: str | None = None) -> dict:
         names = self.names if names is None else names
         options = dict(frames=self.frames, seed=self.seed, width=self.width, height=self.height)
+        if self.source_audio:
+            options['audio_filename'] = audio_name or self.source_audio.name
         refs = tuple(names[ref.image_index] for ref in self.references)
         if self.groups:
             return h3.build_temporal_guided_video(self.prompt, guides=[
@@ -119,9 +124,9 @@ async def admit(form, *, limits: VideoLimits = VideoLimits()) -> H3Request:
         values = form.getlist(key)
         if key != 'images' and len(values) != 1:
             invalid(f'{key} must occur only once', key)
-        if key in ('images', 'input_reference'):
+        if key in ('images', 'input_reference', 'source_audio'):
             if any(not isinstance(value, UploadFile) for value in values):
-                invalid(f'{key} must contain still image uploads', key)
+                invalid(f'{key} must contain file uploads', key)
         elif any(not isinstance(value, str) or not value.strip() for value in values):
             invalid(f'{key} must contain a nonempty string', key)
     prompt = form['prompt'].strip()
@@ -212,7 +217,8 @@ async def admit(form, *, limits: VideoLimits = VideoLimits()) -> H3Request:
     for group in groups:
         if len({dimensions[i] for i in group.image_indices}) != 1:
             invalid('all images in each temporal group must have matching dimensions', 'temporal_groups')
-    return H3Request(prompt, frames, seed, width, height, uploads, tuple(names), tuple(refs), tuple(groups), first_frame)
+    audio = await validate_source_audio(form.get('source_audio'), frames / h3.FPS)
+    return H3Request(prompt, frames, seed, width, height, uploads, tuple(names), tuple(refs), tuple(groups), first_frame, audio)
 
 
 def _schema_for(declared, field):
@@ -247,8 +253,8 @@ def _compatible(schema, value, graph, field, node_type) -> bool:
         source, output = value
         return kind == OUTPUTS[graph[source]['class_type']][output]
     # Upload basenames do not yet appear in LoadImage's file chooser.
-    if node_type == 'LoadImage' and field == 'image':
-        return isinstance(kind, list) and options.get('image_upload') is True
+    if (node_type, field) in (('LoadImage', 'image'), ('LoadAudio', 'audio')):
+        return isinstance(kind, list) and options.get(field + '_upload') is True
     if isinstance(kind, list):
         return value in kind
     if kind in ('COMBO', 'COMFY_DYNAMICCOMBO_V3'):
@@ -324,6 +330,7 @@ async def capabilities(comfy, *, limits: VideoLimits = VideoLimits()) -> dict:
     common = dict(frames=362, seed=2**64-1)
     profiles = {
         'fl8': h3.build_i2v('discovery', image_filename='h3_probe.png', **common),
+        'ia2v_fl8': h3.build_ia2v('discovery', image_filename='h3_probe.png', audio_filename='h3_probe.wav', **common),
         'ref20': h3.build_r2v('discovery', reference_filenames=['h3_probe.png','h3_probe2.png'], **common),
         'temporal_ref20': h3.build_temporal_guided_video('discovery', guides=[h3.TemporalGuide(tuple(f'h3_probe{i}.png' for i in range(39)), 323)], reference_filenames=['h3_ref.png','h3_ref2.png'], **common),
     }
@@ -339,4 +346,5 @@ async def capabilities(comfy, *, limits: VideoLimits = VideoLimits()) -> dict:
             'temporal_groups':{'max_count':3,'image_counts':[1,5,22,39], 'fields':['frame_index','image_indices']},
             'uploads':{'field':'images','mime_types':['image/png','image/jpeg'],'max_total_bytes':MAX_BYTES,
                        'max_total_pixels':MAX_PIXELS,'max_image_pixels':MAX_IMAGE_PIXELS,'max_count':MAX_IMAGES},
-            'unsupported':['seconds','camera_lora','loras','motion_speed','source_audio','control_video','negative_prompt','cfg','custom_sampling']}
+            'source_audio':source_audio_capabilities(result['ia2v_fl8']['available']),
+            'unsupported':['seconds','camera_lora','loras','motion_speed','control_video','negative_prompt','cfg','custom_sampling']}

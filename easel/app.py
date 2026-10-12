@@ -41,6 +41,7 @@ from . import h3_controls, h3_graph
 from .video_controls import (guiding_nodes_available, parse_guiding_frames,
                              validate_video_form, validate_video_uploads, video_capabilities)
 from .video_loras import VIDEO_LORAS, VideoLoRAError, installed_lora_names, parse_video_loras
+from .source_audio import audio_nodes_available, upload_source_audio, validate_source_audio
 
 MAX_N = 4
 MAX_FANOUT = 16  # separator fan-out ceiling (one job, one GPU slot)
@@ -520,10 +521,11 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             if model == h3_graph.VIDEO_MODEL_ID:
                 return await h3_controls.capabilities(comfy, limits=video_limits)
             available = await guiding_nodes_available(comfy)
+            audio_available = await audio_nodes_available(comfy)
         except (ComfyError, httpx.HTTPError) as exc:
             message = "H3 runtime discovery failed" if model == h3_graph.VIDEO_MODEL_ID else str(exc)
             raise APIError(502, message, type="api_error", code="upstream_error") from None
-        return video_capabilities(guides_available=available, limits=video_limits)
+        return video_capabilities(guides_available=available, audio_available=audio_available, limits=video_limits)
 
     async def create_h3_video(request: Request):
         admission = await h3_controls.admit(await request.form(), limits=video_limits)
@@ -559,7 +561,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
                 names.append(name)
             if len(set(names)) != len(names):
                 raise APIError(502, "upstream returned duplicate H3 input names", type="api_error", code="upstream_upload_error")
-            graph = admission.graph(tuple(names))
+            audio_name = await upload_source_audio(comfy, admission.source_audio) if admission.source_audio else None
+            graph = admission.graph(tuple(names), audio_name)
             # Keep outputs isolated for each owner, as with LTX.
             for node in graph.values():
                 if node["class_type"] == "SaveVideo":
@@ -595,6 +598,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         lora_reference_strength: float | None = Form(None),
         guiding_frames: str | None = Form(None),
         guiding_images: list[FastAPIUploadFile] | None = File(default=None),
+        source_audio: FastAPIUploadFile | None = File(default=None),
     ):
         require_auth(settings, request)
         resolve_server("video", settings)
@@ -670,11 +674,20 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             ("input_reference", input_reference), ("lora_reference", lora_reference)) if upload is not None]
         uploads.extend(("guiding_images", upload) for upload in guide_uploads)
         await validate_video_uploads(uploads)
+        audio = await validate_source_audio(source_audio, (seconds * 24 + 1) / 24)
 
         comfy = request.app.state.comfy_video
         if comfy is None:
             raise APIError(503, "video server is not available", type="api_error",
                            code="video_server_unavailable")
+        if audio:
+            try:
+                available = await audio_nodes_available(comfy, width=width, height=height, duration=(seconds * 24 + 1) / 24)
+            except (ComfyError, httpx.HTTPError):
+                raise APIError(502, "audio runtime discovery failed", type="api_error", code="upstream_error") from None
+            if not available:
+                raise APIError(503, "ComfyUI lacks compatible source-audio nodes", type="api_error",
+                               code="audio_nodes_unavailable", param="source_audio")
         if guides:
             try:
                 available = await guiding_nodes_available(comfy)
@@ -748,6 +761,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
                     raise APIError(502, str(exc), type="api_error", code="upstream_upload_error")
                 guide_names.append(f"{subfolder}/{name}" if subfolder else name)
             prefix = f"easel/videos/{uuid.uuid4().hex}"
+            audio_name = await upload_source_audio(comfy, audio) if audio else None
             graph = text_to_video(
                 prompt=", ".join([entry["trigger"] for entry, _strength in selections
                                   if entry["trigger"] and entry["trigger"] not in prompt] + [prompt]),
@@ -765,6 +779,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
                 reference_strength=lora_reference_strength if lora_reference_strength is not None else 1.0,
                 guiding_frames=[(guide_names[guide.image_index], guide.frame_index, guide.strength)
                                 for guide in guides],
+                source_audio=audio_name,
             )
             try:
                 prompt_id = await comfy.submit(graph)

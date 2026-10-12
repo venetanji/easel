@@ -75,6 +75,23 @@ pass policy behind these tested API boundaries. Discovery must continue to
 separate code support, installation/node availability, execution evidence and
 visual quality. Credentials, media uploads and job persistence stay with Easel.
 
+## Recovered source-audio recipes (12 October 2026)
+
+The active Creative Skills main worktree now contains `comfy-graph/` and its
+skill adapters, recovered from archived main `0e208b2` and the uncommitted H3
+worktree `feat/minimax-h3-t2va-20261002`. See `comfy-graph/RECOVERY.md` in that
+repository for the recovery boundary. Easel remains independent of that package
+at runtime and never imports temporary worktree paths.
+
+Easel's optional LTX audio branch follows the recovered
+`creative_comfy_graph.ltx_profiles.build_video` source-encoding/frozen-mask
+topology, restoring the original encoded audio between its sampling passes.
+Its H3 audio branch follows the native `MiniMaxH3AddGuide` audio ports in the
+pinned ComfyUI source already cited in H3_BASELINE.md. Both branches mux the
+trimmed normalized source instead of model-decoded audio. This updates the
+source-availability boundary; it does not claim a new immutable publication,
+byte-identical generators, GPU execution, or perceptual lip-sync validation.
+
 ## H3 cloud baseline
 
 `easel/h3_graph.py` adapts the unpublished October 2 H3 prototype into Easel's

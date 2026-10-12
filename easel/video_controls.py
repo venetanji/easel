@@ -31,6 +31,7 @@ VIDEO_FORM_FIELDS = {
     'prompt', 'model', 'seconds', 'size', 'input_reference', 'camera_lora',
     'camera_lora_strength', 'loras', 'motion_speed', 'seed', 'lora_reference',
     'lora_reference_strength', 'guiding_frames', 'guiding_images',
+    'source_audio',
 }
 
 
@@ -167,7 +168,9 @@ async def guiding_nodes_available(comfy) -> bool:
     return True
 
 
-def video_capabilities(*, guides_available: bool, limits: VideoLimits = VideoLimits()) -> dict:
+def video_capabilities(*, guides_available: bool, audio_available: bool = False,
+                       limits: VideoLimits = VideoLimits()) -> dict:
+    from .source_audio import source_audio_capabilities
     return {
         'object': 'video.capabilities', 'schema_version': 1, 'model': VIDEO_MODEL_ID,
         'fps': FPS, 'seconds': {'min': 1, 'max': 12, 'default': 4},
@@ -179,6 +182,7 @@ def video_capabilities(*, guides_available: bool, limits: VideoLimits = VideoLim
         'motion_speed': {'min': 0.025, 'max': 1, 'requires_lora': 'slow-motion'},
         'lora_reference_strength': {'min': 0, 'max': 1, 'default': 1, 'requires_lora': 'ingredients'},
         'uploads': {'mime_types': list(IMAGE_MIME_TYPES), 'max_total_bytes': MAX_VIDEO_UPLOAD_BYTES},
+        'source_audio': source_audio_capabilities(audio_available),
         'guiding_frames': {'supported': True, 'available': guides_available,
                            'validation': 'graph_contract_tested', 'max_count': MAX_GUIDING_FRAMES,
                            'frame_index_multiple': 1, 'min_strength': 0, 'max_strength': 1,

@@ -43,6 +43,13 @@ def _image_name(value: str) -> str:
     return value
 
 
+def _audio_name(value: str) -> str:
+    if (not isinstance(value, str) or len(value) > 200 or
+            re.fullmatch(r"[A-Za-z0-9_-]+\.(?:wav|mp3|flac|ogg|m4a)", value) is None):
+        raise ValueError("audio filename must be a managed audio input basename")
+    return value
+
+
 def _references(values, *, required: bool) -> tuple[str, ...]:
     minimum = 1 if required else 0
     if not isinstance(values, (list, tuple)) or not minimum <= len(values) <= MAX_REFERENCES:
@@ -74,6 +81,7 @@ def _build_video(
     filename_prefix: str, reference_mode: bool = False,
     image_filename: str | None = None, reference_filenames: tuple[str, ...] = (),
     ref_image_size: str = "match", guides: tuple[TemporalGuide, ...] = (),
+    audio_filename: str | None = None,
 ) -> dict:
     if not isinstance(prompt, str) or not prompt.strip() or "\x00" in prompt:
         raise ValueError("prompt must be nonblank and contain no NUL")
@@ -120,6 +128,13 @@ def _build_video(
                                 image2=graph.node("LoadImage", image=name)[0])[0]
         conditioning = graph.node("MiniMaxH3AddGuide", positive=conditioning, latent=av[1],
                                   vae=video_vae[0], image=images, frame_idx=guide.frame_index)[0]
+    source_audio = None
+    if audio_filename is not None:
+        loaded = graph.node("LoadAudio", audio=_audio_name(audio_filename))
+        source_audio = graph.node("TrimAudioDuration", audio=loaded[0],
+                                  start_index=0.0, duration=frames / FPS)
+        conditioning = graph.node("MiniMaxH3AddGuide", positive=conditioning, latent=av[1],
+                                  audio_vae=audio_vae[0], audio=source_audio[0], frame_idx=0)[0]
     guider = graph.node("BasicGuider", model=model[0], conditioning=conditioning)
     noise = graph.node("RandomNoise", noise_seed=seed)
     sampler = graph.node("KSamplerSelect", sampler_name="res_multistep" if reference_mode else "euler")
@@ -128,33 +143,45 @@ def _build_video(
     samples = graph.node("SamplerCustomAdvanced", noise=noise[0], guider=guider[0],
                          sampler=sampler[0], sigmas=sigmas[0], latent_image=av[1])
     images = graph.node("VAEDecode", samples=samples[0], vae=video_vae[0])
-    audio = graph.node("VAEDecodeAudio", samples=samples[0], vae=audio_vae[0])
+    audio = source_audio or graph.node("VAEDecodeAudio", samples=samples[0], vae=audio_vae[0])
     video = graph.node("CreateVideo", images=images[0], fps=float(FPS), audio=audio[0], bit_depth=8)
     graph.node("SaveVideo", video=video[0], filename_prefix=filename_prefix, format="mp4", codec="h264")
     return graph.to_dict()
 
 
 def build_t2v(prompt: str, *, width: int = 864, height: int = 480, frames: int = 124,
-              seed: int = 0, filename_prefix: str = "easel/videos/minimax_h3") -> dict:
+              seed: int = 0, filename_prefix: str = "easel/videos/minimax_h3",
+              audio_filename: str | None = None) -> dict:
     return _build_video(prompt, width=width, height=height, frames=frames,
-                        seed=seed, filename_prefix=filename_prefix)
+                        seed=seed, filename_prefix=filename_prefix, audio_filename=audio_filename)
 
 
 def build_i2v(prompt: str, *, image_filename: str, width: int = 864, height: int = 480,
               frames: int = 124, seed: int = 0,
-              filename_prefix: str = "easel/videos/minimax_h3") -> dict:
+              filename_prefix: str = "easel/videos/minimax_h3",
+              audio_filename: str | None = None) -> dict:
     return _build_video(prompt, image_filename=_image_name(image_filename), width=width,
-                        height=height, frames=frames, seed=seed, filename_prefix=filename_prefix)
+                        height=height, frames=frames, seed=seed, filename_prefix=filename_prefix,
+                        audio_filename=audio_filename)
+
+
+def build_ia2v(prompt: str, *, image_filename: str, audio_filename: str,
+               width: int = 864, height: int = 480, frames: int = 124,
+               seed: int = 0, filename_prefix: str = "easel/videos/minimax_h3") -> dict:
+    return build_i2v(prompt, image_filename=image_filename, audio_filename=_audio_name(audio_filename),
+                     width=width, height=height, frames=frames, seed=seed, filename_prefix=filename_prefix)
 
 
 def build_r2v(prompt: str, *, reference_filenames: list[str] | tuple[str, ...],
               ref_image_size: str = "match", width: int = 864, height: int = 480,
               frames: int = 124, seed: int = 0,
-              filename_prefix: str = "easel/videos/minimax_h3") -> dict:
+              filename_prefix: str = "easel/videos/minimax_h3",
+              audio_filename: str | None = None) -> dict:
     return _build_video(prompt, reference_mode=True,
                         reference_filenames=_references(reference_filenames, required=True),
                         ref_image_size=ref_image_size, width=width, height=height,
-                        frames=frames, seed=seed, filename_prefix=filename_prefix)
+                        frames=frames, seed=seed, filename_prefix=filename_prefix,
+                        audio_filename=audio_filename)
 
 
 def build_temporal_guided_video(
@@ -162,10 +189,12 @@ def build_temporal_guided_video(
     reference_filenames: list[str] | tuple[str, ...] = (), ref_image_size: str = "match",
     width: int = 864, height: int = 480, frames: int = 124,
     seed: int = 0, filename_prefix: str = "easel/videos/minimax_h3",
+    audio_filename: str | None = None,
 ) -> dict:
     """REF20 temporal guides, graph-tested only; matching still frames are caller-owned."""
     _integer("frames", frames, MIN_FRAMES, MAX_FRAMES)
     return _build_video(prompt, reference_mode=True, guides=_guides(guides, frames),
                         reference_filenames=_references(reference_filenames, required=False),
                         ref_image_size=ref_image_size, width=width, height=height,
-                        frames=frames, seed=seed, filename_prefix=filename_prefix)
+                        frames=frames, seed=seed, filename_prefix=filename_prefix,
+                        audio_filename=audio_filename)
