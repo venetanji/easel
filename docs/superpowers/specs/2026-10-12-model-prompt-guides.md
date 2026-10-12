@@ -66,7 +66,13 @@ non_diegetic_music: ...
 For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.
 ```
 
-**Essential conventions, official paraphrase:** Camera motion belongs in the shot narrative; include speed and amplitude when useful. Assign stable IDs to speakers and preserve requested speech in language-tagged dialogue blocks. Later shots use increasing cut times inside the clip duration. Use `N/A` for absent score; soundscape `N/A` means complete silence was requested. [H1]
+**Essential conventions, official paraphrase:** Camera motion belongs in the shot narrative; include speed and amplitude when useful. For dialogue or singing, use `<d>[Language] ...</d>`. Put the speaker's identity, stable `(S1)`/`(S2)` ID, action and delivery outside the delimiters; inside, put only the language tag and requested words, preserving their punctuation and language. Later shots use increasing cut times inside the clip duration. Use `N/A` for absent score; soundscape `N/A` means complete silence was requested. [H1]
+
+**Authored dialogue fragment:**
+
+```text
+The adult guide with a warm alto voice (S1) says softly: <d>[English] Follow the blue lantern.</d>
+```
 
 **Short text-to-video illustration:**
 
@@ -96,6 +102,14 @@ non_diegetic_music:
 ```
 
 **Essential conventions, official paraphrase:** A Subject label denotes reusable visual content. Picture labels identify source images or concrete composition/frame anchors; an identity-only source needs no separate Picture definition. Retention distinguishes full preservation, partial preservation, attribute transfer and weak reference. The upstream guide normally recommends a 350–500-word generation description, so a short help snippet must not impose a short final-prompt limit. [H2]
+
+**Dialogue and singing, official paraphrase:** In `detailed_description`, write `<d>[Language] ...</d>`; retain a speaking reference's visual label and independent speaker ID as `<Subject N> (Sx)`. Keep identity, action and delivery outside the block and only the language tag and requested speech/lyrics inside. Preserve the requested words and original language. Reuse each speaker ID across shots. [H1, H2]
+
+**Authored dialogue fragment:** Here `<Subject 1>` denotes a person already defined from a supplied image, and the words are the requested dialogue.
+
+```text
+<Subject 1> (S1), the adult guide with a warm alto voice, says softly: <d>[English] Follow the blue lantern.</d>
+```
 
 **Abbreviated structural illustration:** This demonstrates field and label mapping only; it is shorter than the upstream production-description recommendation.
 
