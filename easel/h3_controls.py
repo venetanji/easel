@@ -14,7 +14,8 @@ from starlette.datastructures import UploadFile
 from . import h3_graph as h3
 from .errors import APIError
 from .video_sizing import VideoLimits, VideoSizingError, parse_video_size
-from .source_audio import SourceAudio, source_audio_capabilities, validate_source_audio
+from .source_audio import (SourceAudio, source_audio_capabilities, upload_selector_available,
+                           validate_source_audio)
 
 MAX_BYTES = 32 * 1024 * 1024
 MAX_PIXELS = 64_000_000
@@ -254,7 +255,7 @@ def _compatible(schema, value, graph, field, node_type) -> bool:
         return kind == OUTPUTS[graph[source]['class_type']][output]
     # Upload basenames do not yet appear in LoadImage's file chooser.
     if (node_type, field) in (('LoadImage', 'image'), ('LoadAudio', 'audio')):
-        return isinstance(kind, list) and options.get(field + '_upload') is True
+        return isinstance(value, str) and upload_selector_available(schema, field + '_upload')
     if isinstance(kind, list):
         return value in kind
     if kind in ('COMBO', 'COMFY_DYNAMICCOMBO_V3'):

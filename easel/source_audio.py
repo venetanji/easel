@@ -42,6 +42,16 @@ def audio_tools_available() -> bool:
     return bool(shutil.which('ffprobe') and shutil.which('ffmpeg'))
 
 
+def upload_selector_available(port: object, upload_flag: str) -> bool:
+    if not isinstance(port, list) or len(port) < 2 or not isinstance(port[1], dict):
+        return False
+    kind, options = port[0], port[1]
+    if options.get(upload_flag) is not True or options.get('multiselect', False) is not False:
+        return False
+    choices = kind if isinstance(kind, list) else options.get('options') if kind == 'COMBO' else None
+    return isinstance(choices, list) and all(isinstance(choice, str) for choice in choices)
+
+
 async def _run(*arguments: str) -> bytes:
     try:
         process = await asyncio.create_subprocess_exec(
@@ -160,8 +170,7 @@ async def _audio_nodes_available(comfy, *, width: int, height: int, duration: fl
             if not isinstance(port, list) or not port:
                 return False
             if kind is None:
-                if (not isinstance(port[0], list) or len(port) < 2 or
-                        not isinstance(port[1], dict) or port[1].get('audio_upload') is not True):
+                if not upload_selector_available(port, 'audio_upload'):
                     return False
             elif port[0] != kind:
                 return False

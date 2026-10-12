@@ -111,6 +111,38 @@ def test_audio_must_cover_rendered_duration_not_requested_seconds(audio_api, mod
     assert not backend.uploaded and backend.queue_calls == 0
 
 
+@pytest.mark.skipif(not source_audio.audio_tools_available(), reason='ffmpeg/ffprobe required')
+@pytest.mark.parametrize('model', ['ltx-2.5', 'minimax-h3'])
+def test_audio_combo_selector_supports_new_uploads(audio_api, model):
+    client, backend = audio_api
+    backend.schemas['LoadAudio']['input']['required']['audio'] = [
+        'COMBO', {'options': ['existing.wav'], 'audio_upload': True, 'multiselect': False},
+    ]
+    response = client.get('/v1/videos/capabilities', params={'model': model})
+    assert response.status_code == 200 and response.json()['source_audio']['available']
+    response = submit(client, model, image=True)
+    assert response.status_code == 200, response.text
+    assert nodes(backend, 'LoadAudio')[0][1]['audio'].startswith('easel_audio_')
+
+
+@pytest.mark.parametrize('model', ['ltx-2.5', 'minimax-h3'])
+@pytest.mark.parametrize('selector', [
+    ['COMBO', {'audio_upload': True}],
+    ['COMBO', {'options': 'invalid', 'audio_upload': True}],
+    ['COMBO', {'options': [123], 'audio_upload': True}],
+    ['COMBO', {'options': [], 'audio_upload': False}],
+    ['COMBO', {'options': [], 'audio_upload': True, 'multiselect': True}],
+    ['COMBO', {'options': [], 'audio_upload': True, 'multiselect': 0}],
+    ['STRING', {'options': [], 'audio_upload': True}],
+])
+def test_incompatible_audio_combo_selector_is_unavailable(audio_api, model, selector):
+    client, backend = audio_api
+    backend.schemas['LoadAudio']['input']['required']['audio'] = selector
+    response = client.get('/v1/videos/capabilities', params={'model': model})
+    assert response.status_code == 200 and not response.json()['source_audio']['available']
+    assert not backend.uploaded and backend.queue_calls == 0
+
+
 @pytest.mark.parametrize('model', ['ltx-2.5', 'minimax-h3'])
 def test_size_limit_before_decoder_or_backend(audio_api, model, monkeypatch):
     client, backend = audio_api
