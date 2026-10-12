@@ -10,7 +10,8 @@ import uuid
 from contextlib import asynccontextmanager, suppress
 
 import httpx
-from fastapi import File, FastAPI, Form, Request, Response, UploadFile as FastAPIUploadFile
+from fastapi import Depends, File, FastAPI, Form, Request, Response, UploadFile as FastAPIUploadFile
+from fastapi.security import HTTPBearer
 from fastapi.exceptions import RequestValidationError
 from starlette.datastructures import UploadFile
 from fastapi.responses import JSONResponse
@@ -29,6 +30,7 @@ from .config import MODELS, ModelSpec, Settings, UnknownModelError, parse_size, 
 from .errors import APIError, error_response
 from .image_jobs import ImageJobs, wants_async
 from .audio_api import AUDIO_MODELS, register_audio_routes
+from .api_docs import API_DESCRIPTION, ROUTE_DOCS, TAGS
 from .suno_client import SunoClient
 from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
@@ -415,7 +417,16 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             if http is not None:
                 await http.aclose()
 
-    app = FastAPI(title="easel", lifespan=lifespan)
+    # This dependency only advertises bearer auth to OpenAPI/Swagger. Keep the
+    # existing require_auth checks and error responses in their original places.
+    bearer_auth = HTTPBearer(
+        scheme_name="BearerAuth", auto_error=False,
+        description="Enter your Easel API key only, without the Bearer prefix. "
+                    "Required for untrusted clients when EASEL_API_KEY is configured.",
+    )
+    auth_docs = [Depends(bearer_auth)]
+    app = FastAPI(title="easel", lifespan=lifespan,
+                  description=API_DESCRIPTION, openapi_tags=TAGS)
     app.state.settings = settings
     app.state.inflight = Inflight(settings.max_inflight)
     app.state.inflight_video = app.state.inflight if shared_backend else Inflight(settings.max_inflight)
@@ -430,7 +441,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
     app.state.comfy_video = comfy_video
     app.state.suno = suno
     app.state.image_jobs = ImageJobs(settings.image_job_dir, {"image": comfy, "video": comfy_video})
-    register_audio_routes(app, require_auth)
+    register_audio_routes(app, require_auth, auth_docs)
 
     @app.exception_handler(APIError)
     async def _handle_api_error(request: Request, exc: APIError):
@@ -446,11 +457,12 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             400, f"invalid value for '{param}'" if param else "invalid request", param=param,
         ))
 
-    @app.get("/health")
+    @app.get("/health", **ROUTE_DOCS[("GET", "/health")])
     async def health():
         return {"status": "ok"}
 
-    @app.get("/v1/models")
+    @app.get("/v1/models", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/models")])
     async def list_models(request: Request):
         require_auth(settings, request)
         created = 1_700_000_000
@@ -469,7 +481,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
                          model_parameter="suno_model")
         return {"object": "list", "data": data}
 
-    @app.get("/v1/videos/loras")
+    @app.get("/v1/videos/loras", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/videos/loras")])
     async def list_video_loras(request: Request, model: str = VIDEO_MODEL_ID):
         require_auth(settings, request)
         resolve_server("video", settings)
@@ -492,7 +505,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             for entry in VIDEO_LORAS.values()
         ]}
 
-    @app.get("/v1/videos/capabilities")
+    @app.get("/v1/videos/capabilities", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/videos/capabilities")])
     async def get_video_capabilities(request: Request, model: str = VIDEO_MODEL_ID):
         require_auth(settings, request)
         resolve_server("video", settings)
@@ -563,7 +577,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
                 "completed_at": None, "expires_at": created_at + VIDEO_TTL_SECONDS,
                 "error": None, "model": h3_graph.VIDEO_MODEL_ID, "progress": 0, **video_timing(video_id)}
 
-    @app.post("/v1/videos")
+    @app.post("/v1/videos", dependencies=auth_docs,
+              **ROUTE_DOCS[("POST", "/v1/videos")])
     async def create_video(
         request: Request,
         prompt: str = Form(...),
@@ -772,7 +787,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             "progress": 0,
         }
 
-    @app.get("/v1/videos/{video_id}")
+    @app.get("/v1/videos/{video_id}", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/videos/{video_id}")])
     async def retrieve_video(request: Request, video_id: str):
         require_auth(settings, request)
         comfy = request.app.state.comfy_video
@@ -796,7 +812,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         video.pop("_started_at", None)
         return video
 
-    @app.get("/v1/videos/queue/{video_id}")
+    @app.get("/v1/videos/queue/{video_id}", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/videos/queue/{video_id}")])
     async def video_queue_item(request: Request, video_id: str):
         require_auth(settings, request)
         comfy = request.app.state.comfy_video
@@ -869,7 +886,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             ),
         }
 
-    @app.get("/v1/videos/{video_id}/content")
+    @app.get("/v1/videos/{video_id}/content", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/videos/{video_id}/content")])
     async def video_content(request: Request, video_id: str):
         require_auth(settings, request)
         comfy = request.app.state.comfy_video
@@ -899,7 +917,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             headers={"Content-Disposition": f'attachment; filename="{video_id}.mp4"'},
         )
 
-    @app.post("/v1/images/generations")
+    @app.post("/v1/images/generations", dependencies=auth_docs,
+              **ROUTE_DOCS[("POST", "/v1/images/generations")])
     async def generations(request: Request):
         require_auth(settings, request)
         try:
@@ -928,7 +947,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         async with image_admission(request, server, rf, body.get("model") or DEFAULT_MODEL) as job_id:
             return await image_request_response(request, graph, rf, server, job_id)
 
-    @app.post("/v1/images/edits")
+    @app.post("/v1/images/edits", dependencies=auth_docs,
+              **ROUTE_DOCS[("POST", "/v1/images/edits")])
     async def edits(request: Request):
         require_auth(settings, request)
         form = await request.form()
@@ -965,7 +985,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             )
             return await image_request_response(request, graph, rf, server, job_id)
 
-    @app.post("/v1/images/variations")
+    @app.post("/v1/images/variations", dependencies=auth_docs,
+              **ROUTE_DOCS[("POST", "/v1/images/variations")])
     async def variations(request: Request):
         require_auth(settings, request)
         form = await request.form()
@@ -990,7 +1011,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             )
             return await image_request_response(request, graph, rf, server, job_id)
 
-    @app.get("/v1/images/jobs/{job_id}")
+    @app.get("/v1/images/jobs/{job_id}", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/images/jobs/{job_id}")])
     async def image_job(request: Request, job_id: str):
         require_auth(settings, request)
         try:
@@ -1002,7 +1024,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             raise APIError(503, "image job storage is unavailable", type="api_error",
                            code="job_storage_unavailable")
 
-    @app.get("/v1/images/jobs/{job_id}/content/{index}")
+    @app.get("/v1/images/jobs/{job_id}/content/{index}", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/images/jobs/{job_id}/content/{index}")])
     async def image_job_content(request: Request, job_id: str, index: int):
         require_auth(settings, request)
         store = request.app.state.image_jobs.store
@@ -1019,7 +1042,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         return Response(content=images[index], media_type="image/png",
                         headers={"Cache-Control": "private, no-store"})
 
-    @app.get("/v1/images/view")
+    @app.get("/v1/images/view", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/images/view")])
     async def view(request: Request, filename: str, subfolder: str = "", type: str = "output",
                    server: str = "image"):
         require_auth(settings, request)
