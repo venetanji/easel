@@ -16,6 +16,7 @@ from fastapi.exceptions import RequestValidationError
 from starlette.datastructures import UploadFile
 from fastapi.responses import JSONResponse
 
+from .model_guides import get_model_guide
 from .auth import require_auth
 from .public_urls import request_base_url
 from .comfy_client import (
@@ -481,6 +482,12 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             music.update(models_url=request_base_url(request) + "/v1/audio/models",
                          model_parameter="suno_model")
         return {"object": "list", "data": data}
+
+    @app.get("/v1/models/{model_id}/guide", dependencies=auth_docs,
+              **ROUTE_DOCS[("GET", "/v1/models/{model_id}/guide")])
+    async def model_guide(request: Request, model_id: str, mode: str):
+        require_auth(settings, request)
+        return get_model_guide(model_id, mode)
 
     @app.get("/v1/videos/loras", dependencies=auth_docs,
               **ROUTE_DOCS[("GET", "/v1/videos/loras")])
