@@ -1,0 +1,13 @@
+{
+  "method": "isolated installed PromptQueue class, SIGKILL and fresh process; live GPU backends untouched",
+  "before": {
+    "running": 1,
+    "pending": 1,
+    "history": 1
+  },
+  "after": {
+    "running": 0,
+    "pending": 0,
+    "history": 0
+  }
+}

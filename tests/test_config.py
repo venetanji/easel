@@ -79,6 +79,12 @@ def test_settings_defaults():
     assert s.suno_url is None
     assert s.suno_api_token is None
     assert s.suno_timeout == 180
+    assert tuple(str(network) for network in s.trusted_client_networks) == (
+        "127.0.0.0/8", "::1/128", "100.64.0.0/10", "fd7a:115c:a1e0::/48",
+    )
+    assert s.trusted_proxy_networks == ()
+    assert s.require_auth_networks == ()
+    assert s.public_url is None
 
 
 def test_suno_settings_are_optional_and_strip_blank_values():
@@ -118,10 +124,46 @@ def test_settings_blank_api_key_is_none():
     assert Settings.from_env({"EASEL_API_KEY": "   "}).api_key is None
 
 
+def test_auth_network_settings_are_explicit_and_strip_whitespace():
+    settings = Settings.from_env({
+        "EASEL_TRUSTED_CLIENT_CIDRS": " 192.168.0.1/32, , ::1/128 ",
+        "EASEL_TRUSTED_PROXY_CIDRS": " 10.99.0.8/32 ",
+        "EASEL_REQUIRE_AUTH_CIDRS": " 100.64.0.11/32 ",
+    })
+    assert tuple(str(network) for network in settings.trusted_client_networks) == (
+        "192.168.0.1/32", "::1/128",
+    )
+    assert tuple(str(network) for network in settings.trusted_proxy_networks) == ("10.99.0.8/32",)
+    assert tuple(str(network) for network in settings.require_auth_networks) == ("100.64.0.11/32",)
+    assert Settings.from_env({"EASEL_TRUSTED_CLIENT_CIDRS": ""}).trusted_client_networks == ()
+
+
+@pytest.mark.parametrize("name", ["EASEL_TRUSTED_CLIENT_CIDRS", "EASEL_TRUSTED_PROXY_CIDRS",
+                                 "EASEL_REQUIRE_AUTH_CIDRS"])
+@pytest.mark.parametrize("value", ["localhost", "*", "100.64.0.7/10", "127.0.0.1/33"])
+def test_invalid_auth_networks_fail_at_startup(name, value):
+    with pytest.raises(ValueError):
+        Settings.from_env({name: value})
+
+
 def test_image_job_directory_override_and_blank_default():
     default = Settings.from_env({}).image_job_dir
     assert Settings.from_env({"EASEL_JOB_DIR": "/private/jobs"}).image_job_dir == "/private/jobs"
     assert Settings.from_env({"EASEL_JOB_DIR": "  "}).image_job_dir == default
+
+
+@pytest.mark.parametrize("value", ["not-a-url", "ftp://easel", "https://user:secret@easel",
+                                  "https://easel/v1", "https://easel?token=secret",
+                                  "https://easel#fragment"])
+def test_public_url_must_be_an_origin(value):
+    with pytest.raises(ValueError, match="EASEL_PUBLIC_URL"):
+        Settings.from_env({"EASEL_PUBLIC_URL": value})
+
+
+def test_public_url_is_optional_and_strips_whitespace():
+    assert Settings.from_env({"EASEL_PUBLIC_URL": " "}).public_url is None
+    assert Settings.from_env({"EASEL_PUBLIC_URL": " https://easel.ait4x.org/ "}).public_url == \
+        "https://easel.ait4x.org/"
 
 
 def test_image_backend_url_precedence_and_legacy_compatibility():

@@ -20,6 +20,22 @@ def build(tmp_path):
     return TestClient(app), video
 
 
+@pytest.mark.parametrize("completed", [False, True])
+def test_backend_restart_loses_video_lookup_without_resubmission(tmp_path, completed):
+    client, video = build(tmp_path)
+    prompt_id = "video-prompt-1"
+    video_id = make_video_id(prompt_id, "ltx-2.5")
+    if completed:
+        video.histories[prompt_id] = {"status": {"status_str": "success", "completed": True},
+                                     "outputs": {"save": {"videos": [{"filename": "out.mp4"}]}}}
+    else:
+        video.pending = [[1, prompt_id]]
+    assert client.get("/v1/videos/" + video_id).status_code == 200
+    restarted, empty = build(tmp_path)
+    assert restarted.get("/v1/videos/" + video_id).status_code == 404
+    assert empty.submissions == []
+
+
 def test_video_queue_exposes_retention_and_lifecycle_fields(tmp_path):
     client, video = build(tmp_path)
     video_id = make_video_id("video-prompt-1", "ltx-2.5")

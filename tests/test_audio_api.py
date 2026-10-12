@@ -14,6 +14,17 @@ from tests.test_image_jobs import QueuedComfy
 
 SONG_ID = "a8627b92-354b-40d9-a50e-ab241e4fb3a1"
 ATTEMPT_ID = "69d70c38-6802-4281-a0ae-fb6f8473f715"
+SUNO_MODELS = {
+    "object": "list", "default_model": "Alex Sedl", "selected_model": "v6-mini",
+    "data": [
+        {"id": "Alex Sedl", "object": "model", "custom": True, "available": True,
+         "selected": False, "default": True},
+        {"id": "v6", "object": "model", "custom": False, "available": True,
+         "selected": False, "default": False},
+        {"id": "v6-mini", "object": "model", "custom": False, "available": True,
+         "selected": True, "default": False},
+    ],
+}
 
 
 class AudioBytes(httpx.AsyncByteStream):
@@ -45,6 +56,8 @@ class FakeREST:
                 return result
             status, data = result
             return httpx.Response(status, json=data)
+        if path == "models":
+            return httpx.Response(200, json=SUNO_MODELS)
         if path.endswith("/audio"):
             return httpx.Response(200, stream=self.stream, headers={
                 "Content-Type": "audio/mp4", "Content-Length": str(len(self.stream.data)),
@@ -76,16 +89,21 @@ async def audio_client(tmp_path):
     async with httpx.AsyncClient(transport=httpx.MockTransport(backend.handle)) as http:
         suno = SunoClient(settings.suno_url, http, token=settings.suno_api_token)
         app = create_app(settings=settings, comfy=QueuedComfy(), suno=suno)
-        async with httpx.AsyncClient(transport=httpx.ASGITransport(app), base_url="http://easel") as client:
+        transport = httpx.ASGITransport(app, client=("203.0.113.10", 123))
+        async with httpx.AsyncClient(transport=transport, base_url="http://easel") as client:
             yield client, backend
 
 
 async def test_audio_discovery_is_optional_and_independent_of_video(audio_client):
-    client, _backend = audio_client
+    client, backend = audio_client
     response = await client.get("/v1/models")
     assert [model["id"] for model in response.json()["data"]] == [
         "qwen-image-2.1", "suno-music", "suno-speech", "suno-sound",
     ]
+    music = next(entry for entry in response.json()["data"] if entry["id"] == "suno-music")
+    assert music["models_url"] == "http://easel/v1/audio/models"
+    assert music["model_parameter"] == "suno_model"
+    assert backend.calls == []
     app = client._transport.app
     app.state.settings = dataclasses.replace(app.state.settings, api_key="client-secret")
     app.state.settings = dataclasses.replace(app.state.settings, suno_url=None)
@@ -93,9 +111,32 @@ async def test_audio_discovery_is_optional_and_independent_of_video(audio_client
                                  headers={"Authorization": "Bearer client-secret"})
     assert response.status_code == 503
     assert response.json()["error"]["code"] == "audio_server_unavailable"
+    response = await client.get("/v1/audio/models", headers={"Authorization": "Bearer client-secret"})
+    assert response.status_code == 503
+
+
+async def test_native_model_discovery_includes_custom_models_and_backend_default(audio_client):
+    client, backend = audio_client
+    response = await client.get("/v1/audio/models")
+    assert response.status_code == 200
+    assert response.json() == SUNO_MODELS
+    assert len(backend.calls) == 1
+    assert backend.calls[0].method == "GET"
+    assert backend.calls[0].url.path == "/api/v1/models"
+
+
+@pytest.mark.parametrize("status,code", [(409, "generation_pending"), (503, "browser_queue_timeout")])
+async def test_native_model_discovery_preserves_backend_guards(audio_client, status, code):
+    client, backend = audio_client
+    backend.responses["models"] = (status, {"error": {"code": code, "message": "Browser unavailable"}})
+    response = await client.get("/v1/audio/models")
+    assert response.status_code == status
+    assert response.json()["error"]["code"] == code
+    assert len(backend.calls) == 1
 
 
 @pytest.mark.parametrize("method,path,body", [
+    ("GET", "/models", None),
     ("POST", "/generations", {"prompt": "Piano"}),
     ("GET", "/generations/status", None),
     ("POST", "/generations/abandon", {"attempt_id": ATTEMPT_ID}),
@@ -118,6 +159,9 @@ async def test_every_audio_route_requires_easel_auth(audio_client, method, path,
 
 
 @pytest.mark.parametrize("body,kind,expected", [
+    ({"prompt": "Warm piano"}, "music", {"tags": "Warm piano", "model": ""}),
+    ({"prompt": "Warm piano", "suno_model": "v6"}, "music", {"model": "v6"}),
+    ({"prompt": "Warm piano", "suno_model": "Alex Sedl"}, "music", {"model": "Alex Sedl"}),
     ({"prompt": "Warm piano", "suno_model": "native-picker-label", "make_instrumental": True,
       "duration_seconds": 20}, "music", {"tags": "Warm piano", "model": "native-picker-label",
                                          "make_instrumental": True, "duration_seconds": 20}),

@@ -1,0 +1,285 @@
+[
+  {
+    "index": 0,
+    "http_status": 200,
+    "seconds": 2.049,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 1,
+    "http_status": 200,
+    "seconds": 2.024,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 2,
+    "http_status": 200,
+    "seconds": 2.023,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 3,
+    "http_status": 429,
+    "seconds": 0.986,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 4,
+    "http_status": 429,
+    "seconds": 0.977,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 5,
+    "http_status": 200,
+    "seconds": 2.023,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 6,
+    "http_status": 200,
+    "seconds": 2.025,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 7,
+    "http_status": 429,
+    "seconds": 0.979,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 8,
+    "http_status": 200,
+    "seconds": 2.017,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 9,
+    "http_status": 200,
+    "seconds": 2.016,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 10,
+    "http_status": 200,
+    "seconds": 2.02,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 11,
+    "http_status": 429,
+    "seconds": 0.969,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 12,
+    "http_status": 200,
+    "seconds": 2.015,
+    "error": null,
+    "track_status": "complete"
+  },
+  {
+    "index": 13,
+    "http_status": 429,
+    "seconds": 0.98,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 14,
+    "http_status": 429,
+    "seconds": 0.967,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 15,
+    "http_status": 429,
+    "seconds": 0.976,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 16,
+    "http_status": 429,
+    "seconds": 0.978,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 17,
+    "http_status": 429,
+    "seconds": 0.97,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 18,
+    "http_status": 429,
+    "seconds": 0.978,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  },
+  {
+    "index": 19,
+    "http_status": 429,
+    "seconds": 0.977,
+    "error": {
+      "operation_started": false,
+      "operations": {
+        "active_operation": "get_song",
+        "queued": 8,
+        "queue_capacity": 8,
+        "queue_timeout_seconds": 15.0,
+        "operation_timeout_seconds": 120.0
+      },
+      "message": "The browser queue is full; this operation was not started.",
+      "type": "invalid_request_error",
+      "code": "browser_queue_full",
+      "param": null
+    },
+    "track_status": null
+  }
+]

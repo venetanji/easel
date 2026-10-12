@@ -65,6 +65,27 @@ class QueuedComfy(FakeComfy):
         }
 
 
+@pytest.mark.parametrize("failure", [httpx.ReadTimeout("acceptance reply lost"),
+                                     asyncio.CancelledError()])
+async def test_unacknowledged_backend_acceptance_is_not_retried(tmp_path, failure):
+    class AmbiguousComfy(QueuedComfy):
+        async def submit(self, graph):
+            await super().submit(graph)
+            raise failure
+
+    backend = AmbiguousComfy()
+    service = ImageJobs(str(tmp_path), {"image": backend})
+    job_id = await service.admit("image", "qwen-image-2.1", "url")
+    with pytest.raises(type(failure)):
+        await service.submit(job_id, {})
+    restarted = ImageJobs(str(tmp_path), {"image": backend})
+    assert restarted.store.active() == []
+    assert len(backend.pending) == len(backend.submissions) == 1
+    with pytest.raises(APIError) as error:
+        restarted.store.get(job_id)
+    assert error.value.status == 404
+
+
 @pytest.fixture
 def async_api(tmp_path):
     image, video = QueuedComfy(), QueuedComfy()

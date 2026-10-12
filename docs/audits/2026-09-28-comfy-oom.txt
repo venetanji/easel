@@ -1,0 +1,14 @@
+Sep 28 21:54:17 thor kernel: Free swap  = 0kB
+Sep 28 21:54:17 thor kernel: Total swap = 3773436kB
+Sep 28 21:54:17 thor kernel: Free swap  = 0kB
+Sep 28 21:54:17 thor kernel: Total swap = 3773436kB
+Sep 28 21:54:17 thor kernel: Free swap  = 0kB
+Sep 28 21:54:17 thor kernel: Total swap = 3773436kB
+Sep 28 21:54:17 thor kernel: oom-kill:constraint=CONSTRAINT_NONE,nodemask=(null),cpuset=0a2a0fb91b765d0ec9bfd1813f58040d26c18abcdb484b4eb97d0344b2b41685,mems_allowed=0,global_oom,task_memcg=/system.slice/docker-93d5aa788252769ceae32b43f06f0b2a7626db2d0ef78c3dbd0c243fded8c59e.scope,task=python,pid=1281185,uid=0
+Sep 28 21:54:17 thor kernel: Out of memory: Killed process 1281185 (python) total-vm:220674640kB, anon-rss:19090244kB, file-rss:66848kB, shmem-rss:295524kB, UID:0 pgtables:45132kB oom_score_adj:0
+Sep 28 21:54:19 thor dockerd[742]: time="2026-09-28T21:54:19.616998439+08:00" level=info msg="restarting container" container=93d5aa788252769ceae32b43f06f0b2a7626db2d0ef78c3dbd0c243fded8c59e exitCode=137 exitedAt="2026-09-28 13:54:18.984838356 +0000 UTC" manualRestart=false restartCount=1 restartPolicy="{unless-stopped 0}"
+
+Container-name mapping from retained shell tool output:
+/home/venetanji/.codex/sessions/2026/09/29/rollout-2026-09-29T14-32-10-01a0ebdd-17e0-7223-a53b-8088aa501207.jsonl
+record timestamp: 2026-09-29T07:12:04.152Z
+93d5aa788252 comfy-docker-comfyui comfy-docker-comfyui-1 Up 5 hours

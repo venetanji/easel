@@ -151,3 +151,15 @@ def test_audio_examples_match_real_request_models_without_replacing_schema(clien
     for example in media["examples"].values():
         validated = adapter.validate_python(example["value"])
         assert validated.dry_run is True
+
+
+def test_docs_preserve_network_auth_policy_and_native_audio_discovery(client):
+    schema = client.get("/openapi.json").json()
+    description = schema["info"]["description"]
+    assert "EASEL_TRUSTED_CLIENT_CIDRS" in description
+    assert "EASEL_REQUIRE_AUTH_CIDRS" in description
+    operation = schema["paths"]["/v1/audio/models"]["get"]
+    assert operation["tags"] == ["Audio"]
+    assert operation["security"] == [{"BearerAuth": []}]
+    assert "suno_model" in operation["description"]
+    assert "default_model" in operation["description"]

@@ -20,10 +20,13 @@ an optional Suno service.
    can consume GPU time or Suno credits. Audio's `dry_run: true` prepares the
    shared browser form without clicking Create.
 
-`/health` is public. API routes and output URLs require the same bearer token
-when authentication is configured. With no `EASEL_API_KEY`, authentication is
-disabled. Do not publish a deployment without setting a key or equivalent
-access controls. `/docs` and `/openapi.json` describe the API; they do not reveal
+`/health` is public. Untrusted clients need the same bearer token on API routes
+and output URLs when `EASEL_API_KEY` is configured. Trusted local/tailnet clients
+may omit it; `EASEL_TRUSTED_CLIENT_CIDRS` controls that allowlist, and
+`EASEL_REQUIRE_AUTH_CIDRS` overrides trust for public proxies. With no
+`EASEL_API_KEY`, authentication is disabled. Do not publish a deployment without
+setting a key or equivalent access controls. `/docs` and `/openapi.json` describe
+the API; they do not reveal
 configured credentials.
 
 ### Choose the workflow
@@ -197,8 +200,9 @@ ambiguous POST failure must not be automatically retried.""",
         "description": """Send JSON matching one of three model-specific shapes:
 - `suno-music`: prompt is a musical style/description; optionally supply lyrics,
   title, or music controls. Music accepts a prompt, lyrics, or both. Instrumental
-  requests require empty lyrics. Optional `suno_model` is a native picker label,
-  not the Easel routing ID.
+  requests require empty lyrics. Optional `suno_model` is an exact native ID from
+  `/v1/audio/models`, not the Easel routing ID; omitted or blank uses the backend's
+  configured default.
 - `suno-speech`: prompt is the script to speak; optional tone/background music.
 - `suno-sound`: prompt describes a sound; optional one_shot/loop and bpm.
 
@@ -238,5 +242,9 @@ library before retrying: generation may already have consumed credits.""",
     ("GET", "/v1/audio/tracks/{song_id}/content"): {
         "tags": ["Audio"], "summary": "Stream or download saved audio",
         "description": "GET the saved file through Easel with the same bearer token. First POST `/v1/audio/tracks/{song_id}/download`; content returns 404 until audio is saved. Set `download=true` for attachment disposition. Range and conditional request headers are forwarded for playback/caching, and the actual file type is preserved. Audio stays in Suno's download volume, separate from Easel's image cache.",
+    },
+    ("GET", "/v1/audio/models"): {
+        "tags": ["Audio"], "summary": "List native Suno music models",
+        "description": "Discovers the logged-in account's base and custom music models. Use an exact returned ID as suno_model on suno-music requests; omitted or blank uses the backend's configured default_model, not its previous selection. The response also includes selected_model and data entries with availability, selection, and default flags. Discovery does not change the selected model or spend generation credits, but shares Suno's browser queue and pending-attempt guard. Unlike /v1/models, this route contacts the backend.",
     },
 }
