@@ -241,7 +241,7 @@ library before retrying: generation may already have consumed credits.""",
     },
     ("GET", "/v1/audio/tracks/{song_id}/content"): {
         "tags": ["Audio"], "summary": "Stream or download saved audio",
-        "description": "GET the saved file through Easel with the same bearer token. First POST `/v1/audio/tracks/{song_id}/download`; content returns 404 until audio is saved. Set `download=true` for attachment disposition. Range and conditional request headers are forwarded for playback/caching, and the actual file type is preserved. Audio stays in Suno's download volume, separate from Easel's image cache.",
+        "description": "GET the saved file through Easel with the same bearer token. First POST `/v1/audio/tracks/{song_id}/download`; content returns 404 until audio is saved. Set `download=true` for attachment disposition. **In Swagger:** authorize first, set the download query parameter to true, click **Execute**, then click **Download file** in the response. Open the downloaded file in your audio player. The inline player can fail on bearer-protected deployments because it makes a separate media request without Swagger's Authorization header; use the download workflow instead. Never put a bearer token in the URL. Range and conditional request headers are forwarded for playback/caching, and the actual file type is preserved. Audio stays in Suno's download volume, separate from Easel's image cache.",
     },
     ("GET", "/v1/audio/models"): {
         "tags": ["Audio"], "summary": "List native Suno music models",

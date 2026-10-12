@@ -147,6 +147,13 @@ queue. Save returned song IDs. For each track:
 3. `GET /v1/audio/tracks/{song_id}/content` to stream it, or add
    `?download=true` for a file attachment. Content returns 404 until saved.
 
+In Swagger, after saving the track, **Authorize**, set the content route's
+`download` query parameter to `true`, click **Execute**, then click **Download
+file** in the response. Open the saved file in your audio player. The inline
+player can fail on bearer-protected deployments: it makes a separate media
+request without Swagger's Authorization header. Use the download workflow;
+never add a token to the URL.
+
 Keep the bearer key on these requests. If generation times out or a challenge
 appears, inspect shared status before retrying; a submission may already have
 consumed credits. See [Audio API](AUDIO_API.md) for manual challenge recovery,
