@@ -41,9 +41,11 @@ LTX timed stills work through saved assets, MCP multipart, and `LTXVAddGuide`/`L
 
 **Interface:** read-only `get_model_guide({model, mode})` resolves the existing configured model/credentials, then fetches only its known API origin. Return guide text as reference content, not executable instructions.
 
+**CLI:** add `model-guide MODEL --mode MODE` in `src/easel_cli/cli.py`, using `EaselClient.get_model_guide(model, mode)` in `client.py` and its existing HTTP transport. Return the same server payload and sources, with no copied guide prose. Add `tests/test_model_guides.py` for exact URL/arguments, payload identity and unavailable-guide handling.
+
 - [ ] Test exact model routing, auth reuse, redirects/oversize rejection, unavailable guide, and tool visibility in built-in, embedded Codex and external MCP harnesses.
 - [ ] Add the tool and a short shared instruction: fetch the selected model/mode guide before composing a generation prompt; reuse it within the turn. Connect that instruction to each harness and test its presence. Remove conflicting copied model recipes while preserving user-edited imported skills; do not duplicate guide text across consumers.
-- [ ] Run package tests and `node --test test/agent.test.js test/easel-tool-host.test.js`; commit `feat: expose shared prompting guides`.
+- [ ] Run package tests, `node --test test/agent.test.js test/easel-tool-host.test.js`, and CLI `uv run --group dev pytest -q tests/test_model_guides.py`; commit `feat: expose shared prompting guides`.
 
 ### Task 3: Wire video source audio
 
