@@ -257,3 +257,16 @@ def test_named_video_schema_preserves_generated_form_definition(client):
     named.pop("title")
     generated.pop("title")
     assert named == generated
+
+
+def test_swagger_audio_content_explains_authenticated_download_workflow(client):
+    operation = client.get("/openapi.json").json()["paths"][
+        "/v1/audio/tracks/{song_id}/content"]["get"]
+    description = operation["description"]
+    for instruction in ("download=true", "Execute", "Download file", "inline player", "bearer"):
+        assert instruction in description
+    parameter = next(p for p in operation["parameters"] if p["name"] == "download")
+    assert parameter["in"] == "query"
+    assert parameter["schema"]["type"] == "boolean"
+    assert parameter["schema"]["default"] is False
+    assert operation["security"] == [{"BearerAuth": []}]

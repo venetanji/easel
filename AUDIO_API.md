@@ -111,6 +111,16 @@ browser's unconfirmed wait; it does not cancel accepted tracks or refund credits
    Add `?download=true` for attachment disposition. Byte-range and conditional
    requests are forwarded for playback and caching.
 
+### Downloading through Swagger
+
+After the track's save/download POST succeeds, open its content GET route in
+`/docs`. **Authorize**, set the `download` query parameter to `true`, click
+**Execute**, then click **Download file** in the response. Open the downloaded
+file in your audio player. Swagger's inline player makes a separate request
+without its bearer header, so it can fail even when Execute returns HTTP 200.
+The attachment workflow uses the authenticated response bytes. Keep tokens in
+the Authorization header, never in a URL.
+
 Returned tracks include Easel-hosted `audio_url` and `download_url`; saved-file
 responses retain the actual filename, format and size but omit backend paths and
 direct stream URLs. The content URL returns HTTP 404 until audio has been saved.
