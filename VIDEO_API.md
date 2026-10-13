@@ -53,6 +53,40 @@ now return `400 video_resource_limit` before uploads or backend work. See
 [video sizing and benchmarking](VIDEO_SIZING.md) for shared square/landscape/
 portrait presets, limits, OOM handling and an opt-in resumable GPU matrix runner.
 
+## First-image geometry
+
+For `input_reference`, choose the intended video aspect before creating an
+anchor. `GET /v1/videos/capabilities` for the exact model reports `default_size`,
+`size_presets` with effective `width`/`height`, and `size_constraints.aliases`.
+Resolve the requested size or default through those fields: the nominal
+`1280x720` preset produces `1280x704`. Easel does not derive output dimensions
+from the uploaded image.
+
+The capability response also describes the existing first-image policy in
+`input_reference`: `fit` is `stretch` for H3 or `center_crop` for LTX;
+`target` is `effective_video_dimensions`; `configurable` is `false`.
+These are descriptive metadata, not generation arguments or a new fit control.
+
+| First-image path | Existing preprocessing | Mismatched aspect ratio |
+|---|---|---|
+| H3 FL8, with or without source audio | Stretch to the effective output width and height | Can distort subject proportions |
+| LTX-2.5, with or without source audio | Preserve proportions and center-crop to fill the current sampling canvas, reapplied after spatial upscale | Can remove image content at the edges |
+
+Neither first-image path automatically pads or letterboxes; neither exposes a
+selectable fit mode. Prepare new anchors at the intended effective aspect.
+Inspect an existing reference and explain mismatches before submitting; do not
+silently crop/stretch the source or change the requested video size. Prompt
+wording cannot override preprocessing. Matching aspect does not guarantee exact
+pixel retention or visual fidelity.
+
+This describes the graph paths against pinned native implementations:
+[H3 first-image conditioning](https://github.com/Comfy-Org/ComfyUI/blob/b5cc8830279eae909a59de030af1e50761c36751/comfy_extras/nodes_minimax_h3.py#L145-L161)
+and [LTX first-image conditioning](https://github.com/Comfy-Org/ComfyUI/blob/e9027f2b30f37bb3052714eb08fcf479542f4fc0/comfy_extras/nodes_lt.py#L152-L170).
+It does not verify the runtime revision deployed at an endpoint or claim a new
+GPU/visual validation. H3 REF20 semantic references, temporal groups, LTX timed
+guides and Ingredients sheets have separate preparation paths; this metadata
+must not be applied to them.
+
 ## Create a MiniMax H3 video
 
 The same `POST /v1/videos` endpoint accepts these H3 multipart fields:

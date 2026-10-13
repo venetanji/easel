@@ -83,3 +83,20 @@ def test_openapi_requires_a_single_string_mode_parameter():
     assert len(modes) == 1
     assert modes[0]['required'] is True
     assert modes[0]['schema'] == {'type': 'string', 'title': 'Mode'}
+
+
+def test_h3_base_guide_distinguishes_first_image_preprocessing_from_prompt_syntax():
+    client, fake = build()
+    guide = client.get('/v1/models/minimax-h3/guide?mode=base').json()
+    text = guide['text']
+    assert 'Easel preprocessing' in text
+    assert 'stretched' in text and 'effective output dimensions' in text
+    assert 'source_audio' in text and 'no automatic padding' in text
+    assert 'no selectable fit mode' in text
+    assert 'does not derive video size from the reference' in text
+    assert 'size_presets' in text and 'size_constraints.aliases' in text
+    assert any('b5cc8830279eae909a59de030af1e50761c36751/comfy_extras/nodes_minimax_h3.py' in source
+               for source in guide['sources'])
+    reference = client.get('/v1/models/minimax-h3/guide?mode=reference').json()
+    assert 'Easel preprocessing' not in reference['text']
+    assert fake.submitted_graph is None and fake.uploaded == []
