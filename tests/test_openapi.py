@@ -248,15 +248,54 @@ def test_named_audio_schemas_preserve_generated_request_definitions(client, mode
     assert named == expected
 
 
-def test_named_video_schema_preserves_generated_form_definition(client):
-    named = client.app.openapi()["components"]["schemas"]["VideoGenerationRequest"].copy()
-    client.app.openapi_schema = None
-    original = FastAPI.openapi(client.app)
-    reference = original["paths"]["/v1/videos"]["post"]["requestBody"]["content"]["multipart/form-data"]["schema"]["$ref"]
-    generated = original["components"]["schemas"][reference.rsplit("/", 1)[-1]].copy()
-    named.pop("title")
-    generated.pop("title")
-    assert named == generated
+def test_video_form_exposes_both_models_without_model_specific_defaults(client):
+    body = request_schema(client.app.openapi(), "/v1/videos", "multipart/form-data")
+    properties = body["properties"]
+    assert set(body["required"]) == {"model", "prompt"}
+    assert properties["model"]["enum"] == ["ltx-2.5", "minimax-h3"]
+    assert properties["frames"]["type"] == "integer"
+    assert properties["seconds"]["type"] == "integer"
+    for field in ("semantic_references", "temporal_groups"):
+        assert properties[field]["type"] == "string"  # JSON text multipart parts
+    assert properties["images"]["type"] == "array"
+    assert properties["images"]["items"] == {"type": "string", "format": "binary"}
+    for name, definition in properties.items():
+        assert "default" not in definition, name
+        assert "example" not in definition, name
+        assert "anyOf" not in definition, name  # Direct binary/array controls in Swagger
+    for field in ("input_reference", "source_audio", "lora_reference"):
+        assert properties[field]["format"] == "binary"
+    assert properties["guiding_images"]["items"]["format"] == "binary"
+
+
+def test_video_documented_fields_submit_h3_without_ltx_defaults(tmp_path):
+    import json
+    from tests.test_h3_api import H3Comfy, png
+
+    backend = H3Comfy()
+    settings = dataclasses.replace(Settings.from_env({}), api_key="test-only-key",
+        comfy_video_url="http://fake-video", image_job_dir=str(tmp_path))
+    with TestClient(create_app(settings=settings, comfy=backend, comfy_video=backend)) as client:
+        body = request_schema(client.app.openapi(), "/v1/videos", "multipart/form-data")
+        fields = {name: prop["default"] for name, prop in body["properties"].items()
+                  if "default" in prop}
+        fields.update(model="minimax-h3", prompt="continuous motion", frames="124",
+            temporal_groups=json.dumps([{"frame_index": 0, "image_indices": [0]},
+                                       {"frame_index": 123, "image_indices": [1]}]))
+        assert set(fields) <= body["properties"].keys()
+        response = client.post("/v1/videos", data=fields,
+            files=[("images", ("first.png", png(), "image/png")),
+                   ("images", ("last.png", png(), "image/png"))],
+            headers={"Authorization": "Bearer test-only-key"})
+        assert response.status_code == 200, response.text
+        guides = [node["inputs"] for node in backend.submitted_graph.values()
+                  if node["class_type"] == "MiniMaxH3AddGuide"]
+        assert [guide["frame_idx"] for guide in guides] == [0, 123]
+        # Documentation changes must not relax actual H3 model boundaries.
+        response = client.post("/v1/videos", data={**fields, "seconds": "4"},
+            headers={"Authorization": "Bearer test-only-key"})
+        assert response.status_code == 400
+        assert response.json()["error"]["param"] == "seconds"
 
 
 def test_swagger_audio_content_explains_authenticated_download_workflow(client):

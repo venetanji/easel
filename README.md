@@ -114,9 +114,11 @@ submit **multipart**, not JSON, to `POST /v1/videos`:
   add `input_reference` for image+audio-to-video. Check `source_audio.available`
   in capabilities and supply enough audio for the full rendered duration.
 
-The generated Swagger form currently reflects LTX's parameters. It does not
-expose all H3-only fields and can send LTX defaults that H3 rejects. Use a
-multipart client for H3 and follow its model-specific capabilities and the
+Swagger exposes both models' fields without prefilling model-specific defaults.
+Choose the model, leave unused optional fields blank, and keep **Send empty value**
+unchecked. For H3 guides, select ordered PNG/JPEG files in `images`, then fill
+`temporal_groups` and/or `semantic_references` with JSON text. Clear incompatible
+fields when switching models. Follow model-specific capabilities and the
 [Video API](VIDEO_API.md) field reference. For example, with `EASEL_URL` and
 `EASEL_API_KEY` already set in your local environment:
 

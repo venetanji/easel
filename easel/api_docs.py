@@ -191,11 +191,19 @@ instead of generated audio. Add `input_reference` for image+audio-to-video.
 Read model-specific `source_audio.available` in video capabilities first;
 this path is graph-contract-tested, not a guarantee of lip-sync quality.
 
-**Swagger form limitation:** the automatically generated form below describes
-the LTX function parameters. It does not expose all H3-only fields and may send
-LTX defaults that H3 rejects. For H3, use the multipart example above with a client
-that omits `seconds`; do not treat the displayed form as H3's complete schema.
-Use `/v1/videos/capabilities?model=minimax-h3` for H3 constraints.
+**Swagger form:** choose the model and fill only its applicable controls. Leave
+unused optional fields blank and keep **Send empty value** unchecked. The form
+does not prefill model-specific defaults; omission uses the server's defaults.
+Clear incompatible fields when switching models. For H3, select PNG/JPEG files
+in `images` in upload order, then enter JSON text in `semantic_references` and/or
+`temporal_groups`. For two endpoint stills, use
+`[{"frame_index":0,"image_indices":[0]},{"frame_index":123,"image_indices":[1]}]`
+with `frames=124`. For five-frame boundaries, upload ten ordered stills and use
+`[{"frame_index":0,"image_indices":[0,1,2,3,4]},{"frame_index":119,"image_indices":[5,6,7,8,9]}]`.
+Each upload index must be used exactly once across both metadata fields. To use
+the same still for semantic identity and a timeline guide, upload it twice and
+assign separate indices. Do not combine these fields with `input_reference`.
+Read `/v1/videos/capabilities?model=minimax-h3` for current H3 constraints.
 
 The returned `id` identifies an accepted, queued job; save it, poll
 `GET /v1/videos/{video_id}`, optionally inspect `/v1/videos/queue/{video_id}`,
@@ -301,6 +309,41 @@ def _replace_schema_refs(value, replacements: dict[str, str]) -> None:
             _replace_schema_refs(nested, replacements)
 
 
+def _video_multipart_schema(definition: dict) -> None:
+    """Expose the manually parsed H3 fields alongside the generated LTX form."""
+    properties = definition["properties"]
+    for prop in properties.values():
+        # Multipart omission represents optional values. Direct types let
+        # Swagger render binary files and file arrays instead of anyOf widgets.
+        variants = prop.get("anyOf", [])
+        non_null = [variant for variant in variants if variant.get("type") != "null"]
+        if len(variants) == 2 and len(non_null) == 1:
+            prop.pop("anyOf")
+            prop.update(non_null[0])
+        # In particular, seconds=4 and size=1280x720 are LTX defaults and must
+        # not become multipart parts when the user selects H3.
+        prop.pop("default", None)
+        upload = prop.get("items", prop)
+        if upload.get("contentMediaType") == "application/octet-stream":
+            upload["format"] = "binary"
+    properties["model"]["enum"] = ["ltx-2.5", "minimax-h3"]
+    properties["seconds"]["description"] = "LTX only. Omit for H3. LTX omission uses 4 seconds."
+    properties["size"]["description"] = "Optional WIDTHxHEIGHT. Omit for the selected model's default; check video capabilities."
+    properties.update({
+        "frames": {"type": "integer", "title": "Frames",
+            "description": "H3 only. Omit for its default (124); supported counts follow 17k+5. Check capabilities."},
+        "images": {"type": "array", "items": {"type": "string", "format": "binary"},
+            "title": "Images", "description": "H3 only. Repeated PNG/JPEG uploads in metadata index order. Do not combine with input_reference."},
+        "semantic_references": {"type": "string", "title": "Semantic References",
+            "description": 'H3 only. JSON text, e.g. [{"image_index":0}]. Indices refer to images; omit when unused.'},
+        "temporal_groups": {"type": "string", "title": "Temporal Groups",
+            "description": 'H3 only. JSON text, e.g. [{"frame_index":0,"image_indices":[0,1,2,3,4]}]. Each group is consecutive frames; groups must not overlap. Omit when unused.'},
+    })
+    for field in ("camera_lora", "camera_lora_strength", "loras", "motion_speed",
+                  "lora_reference", "lora_reference_strength", "guiding_frames", "guiding_images"):
+        properties[field]["description"] = "LTX only. Omit for H3."
+
+
 def configure_openapi(app) -> None:
     """Refine documentation schemas without altering runtime request validation."""
     generate_openapi = app.openapi
@@ -328,6 +371,7 @@ def configure_openapi(app) -> None:
         for original, name in names.items():
             if original in components:
                 components[name] = components.pop(original)
+        _video_multipart_schema(components["VideoGenerationRequest"])
         for name, definition in components.items():
             definition["title"] = name
         _replace_schema_refs(schema, {prefix + original: prefix + name
