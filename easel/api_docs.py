@@ -104,6 +104,18 @@ ROUTE_DOCS = {
         "tags": ["Health"], "summary": "Check API liveness",
         "description": "Public endpoint returning `status: ok`. It does not check ComfyUI, Suno, model assets, or generation readiness.",
     },
+    ("GET", "/v1/models/{model_id}/guide"): {
+        "tags": ["Models"], "summary": "Read a reviewed model prompt guide",
+        "description": "Read-only curated guidance; never submits generation or checks upstream readiness. "
+                       "Explicit modes: qwen-image-2.1 generation/editing; minimax-h3 base/reference. "
+                       "Unknown or unreviewed pairs return 404. The version-1 JSON envelope contains "
+                       "version, guide_id, model, mode, text and official source URLs in sources, "
+                       "bounded to 16 KiB. Discover capabilities separately before selecting operations. "
+                       "When available, source_audio conditions video and supplies the trimmed, "
+                       "48 kHz stereo normalized source soundtrack; short tracks are rejected. "
+                       "It is separate from Suno and has no selectable copy/reference modes.",
+        "responses": {404: {"description": "No reviewed guide for this model/mode"}},
+    },
     ("GET", "/v1/models"): {
         "tags": ["Models"], "summary": "List configured models",
         "description": "Lists registered image models, plus `ltx-2.5` and `minimax-h3` when `COMFY_URL_VIDEO` is configured, and `suno-music`, `suno-speech`, and `suno-sound` when `SUNO_URL` is configured. Discovery reflects configuration, not a successful backend health or asset check. Use the returned IDs on the matching image, video, or audio route.",
@@ -290,13 +302,18 @@ def _replace_schema_refs(value, replacements: dict[str, str]) -> None:
 
 
 def configure_openapi(app) -> None:
-    """Name documentation schemas without altering runtime request models."""
+    """Refine documentation schemas without altering runtime request validation."""
     generate_openapi = app.openapi
 
     def openapi() -> dict:
         if app.openapi_schema is not None:
             return app.openapi_schema
         schema = generate_openapi()
+        # Runtime accepts omission until after authentication, then returns 400.
+        guide = schema["paths"]["/v1/models/{model_id}/guide"]["get"]
+        for parameter in guide["parameters"]:
+            if parameter["name"] == "mode" and parameter["in"] == "query":
+                parameter.update(required=True, schema={"type": "string", "title": "Mode"})
         components = schema["components"]["schemas"]
         names = dict(_COMPONENT_SCHEMA_NAMES)
         prefix = "#/components/schemas/"
