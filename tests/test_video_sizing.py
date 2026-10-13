@@ -165,3 +165,20 @@ def test_malformed_video_metadata_is_rejected(metadata):
     parts[2] += metadata
     with pytest.raises(ValueError):
         parse_video_id("_".join(parts))
+
+
+@pytest.mark.parametrize("model, fit", [("ltx-2.5", "center_crop"), ("minimax-h3", "stretch")])
+def test_first_image_fit_metadata_uses_effective_output_geometry_without_generation(api, model, fit):
+    client, backend = api
+    response = client.get('/v1/videos/capabilities', params={'model': model})
+    assert response.status_code == 200
+    body = response.json()
+    assert body['input_reference'] == {
+        'fit': fit, 'target': 'effective_video_dimensions', 'configurable': False,
+    }
+    default = next(preset for preset in body['size_presets'] if preset['size'] == body['default_size'])
+    assert (default['width'], default['height']) == parse_video_size(None, model=model)
+    alias = next(preset for preset in body['size_presets'] if preset['size'] == '1280x720')
+    assert (alias['width'], alias['height']) == (1280, 704)
+    assert body['size_constraints']['aliases']['1280x720'] == '1280x704'
+    assert backend.submitted_graph is None and not backend.uploaded

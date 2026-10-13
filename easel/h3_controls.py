@@ -343,6 +343,7 @@ async def capabilities(comfy, *, limits: VideoLimits = VideoLimits()) -> dict:
             'fps':24,'frames':{'min':124,'max':362,'default':124,'step':17,'offset':5},
             **limits.discovery(h3.VIDEO_MODEL_ID),'default_size':'864x480',
             'seed':{'min':'0','max':str(2**64-1),'encoding':'decimal_string'},
+            'input_reference':{'fit':'stretch','target':'effective_video_dimensions','configurable':False},
             'profiles':result,'semantic_references':{'max_count':2,'fields':['image_index']},
             'temporal_groups':{'max_count':3,'image_counts':[1,5,22,39], 'fields':['frame_index','image_indices']},
             'uploads':{'field':'images','mime_types':['image/png','image/jpeg'],'max_total_bytes':MAX_BYTES,

@@ -54,12 +54,12 @@ const {pathToFileURL} = await import('node:url');
 const {readFileSync} = await import('node:fs');
 const provider = await import(pathToFileURL(process.argv[1]).href);
 const {capabilities, catalog} = JSON.parse(readFileSync(0, 'utf8'));
-const options = {model:'ltx-2.5',baseUrl:'https://easel.test',fetchImpl:async(url,init)=>{
+const options = {model:capabilities.model,baseUrl:'https://easel.test',fetchImpl:async(url,init)=>{
   if(init.method !== 'GET') throw new Error('discovery must be read-only');
-  return Response.json(url.endsWith('/capabilities') ? capabilities : catalog);
+  return Response.json(new URL(url).pathname.endsWith('/capabilities') ? capabilities : catalog);
 }};
 const caps=await provider.discoverVideoCapabilities(options);
-const loras=await provider.listVideoLoras(options);
+const loras=catalog ? await provider.listVideoLoras(options) : [];
 process.stdout.write(JSON.stringify({caps,loras}));
 '''
 
@@ -128,8 +128,23 @@ def test_actual_server_discovery_is_consumed_by_media_mcp(api):
     payload = node_run(NODE_DISCOVER, {'capabilities': client.get('/v1/videos/capabilities').json(),
                                       'catalog': client.get('/v1/videos/loras').json()})
     assert payload['caps']['guiding_frames']['available'] is True
+    assert payload['caps']['input_reference'] == {
+        'fit': 'center_crop', 'target': 'effective_video_dimensions', 'configurable': False,
+    }
     assert {entry['id'] for entry in payload['loras']} == set(VIDEO_LORAS)
     assert any(not entry['supported'] for entry in payload['loras'])
+
+
+def test_h3_first_image_fit_and_effective_sizes_survive_production_mcp_discovery(audio_api):
+    client, backend = audio_api
+    capabilities = client.get('/v1/videos/capabilities', params={'model': 'minimax-h3'}).json()
+    payload = node_run(NODE_DISCOVER, {'capabilities': capabilities})
+    assert payload['caps']['input_reference'] == {
+        'fit': 'stretch', 'target': 'effective_video_dimensions', 'configurable': False,
+    }
+    for field in ('default_size', 'size_presets', 'size_constraints'):
+        assert payload['caps'][field] == capabilities[field]
+    assert backend.submitted_graph is None and not backend.uploaded
 
 
 def test_h3_receipt_is_accepted_by_production_media_job_parser(tmp_path):

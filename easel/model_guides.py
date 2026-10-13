@@ -9,6 +9,7 @@ from .errors import APIError
 MAX_GUIDE_BYTES = 16 * 1024
 _QWEN = 'https://huggingface.co/Qwen/Qwen-Image-2.1/blob/d26bb61231c349cf6b7896fa83353113880e1ba3/README.md'
 _H3_BASE = 'https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/5d9b308a59ab12e67147f191e184baf704185bd1/docs/VIDEO_PROMPT_WRITING_GUIDE_base_en.md'
+_H3_NATIVE = 'https://github.com/Comfy-Org/ComfyUI/blob/b5cc8830279eae909a59de030af1e50761c36751/comfy_extras/nodes_minimax_h3.py#L145-L161'
 _H3_REF = 'https://huggingface.co/MiniMaxAI/MiniMax-H3/blob/5d9b308a59ab12e67147f191e184baf704185bd1/docs/VIDEO_PROMPT_WRITING_GUIDE_ref_en.md'
 _AUDIO = '''Easel source audio: Check current exact-model video capabilities before supplying source_audio. When available, the upload conditions video and supplies its soundtrack: audio starts at zero, is normalized to 48 kHz stereo PCM WAV and trimmed to the rendered duration. Short audio is rejected, never padded. Rendered duration is frames/24 for H3 and (seconds*24+1)/24 for LTX. This is separate from Suno generation; there are no selectable copy/reference modes. Without an upload, the generated-sound guidance applies.'''
 _DIALOGUE = '''Official paraphrase: For dialogue or singing use <d>[Language] ...</d>. Keep speaker identity, stable (S1)/(S2) ID, action and delivery outside the delimiters; inside include only the language tag and requested words, preserving punctuation and original language. Reuse speaker IDs across shots. Use N/A for absent score; overall_soundscape: N/A requests complete silence.'''
@@ -40,8 +41,9 @@ Later shots use increasing cut times within the clip duration. Do not infer last
 ''' + _DIALOGUE + '''
 Authored dialogue fragment: The adult guide with a warm alto voice (S1) says softly: <d>[English] Follow the blue lantern.</d>
 Easel recommendation: Fit actions and dialogue to authoritative frames/FPS duration; for a brief clip prefer one readable action unless cuts are needed.
+Easel preprocessing (not prompt syntax): input_reference is stretched to the effective output dimensions, including with source_audio. A different source aspect ratio can distort subjects. There is no automatic padding and no selectable fit mode; Easel does not derive video size from the reference. Before creating an anchor, resolve the requested size or default_size using capabilities size_presets width/height and size_constraints.aliases, then prepare the anchor at that aspect ratio. For an existing reference, explain any mismatch before submission; do not silently change its framing or the requested video size. This describes first-image FL8 conditioning only, not REF20 semantic references or temporal groups.
 ''' + _AUDIO + '\n' + _BOUNDARY,
-        'sources': [_H3_BASE],
+        'sources': [_H3_BASE, _H3_NATIVE],
     },
     ('minimax-h3', 'reference'): {
         'text': '''Official paraphrase for supported H3 REF20 semantic references: Use six fields in order:
