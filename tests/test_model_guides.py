@@ -73,3 +73,13 @@ def test_missing_mode_is_explicit_and_auth_is_checked_first():
     response = client.get(path, headers={'Authorization': 'Bearer secret'})
     assert response.status_code == 400
     assert response.json()['error']['param'] == 'mode'
+
+
+def test_openapi_requires_a_single_string_mode_parameter():
+    client, _ = build()
+    operation = client.get('/openapi.json').json()['paths']['/v1/models/{model_id}/guide']['get']
+    modes = [parameter for parameter in operation['parameters']
+             if parameter['name'] == 'mode' and parameter['in'] == 'query']
+    assert len(modes) == 1
+    assert modes[0]['required'] is True
+    assert modes[0]['schema'] == {'type': 'string', 'title': 'Mode'}

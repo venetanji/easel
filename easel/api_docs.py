@@ -302,13 +302,18 @@ def _replace_schema_refs(value, replacements: dict[str, str]) -> None:
 
 
 def configure_openapi(app) -> None:
-    """Name documentation schemas without altering runtime request models."""
+    """Refine documentation schemas without altering runtime request validation."""
     generate_openapi = app.openapi
 
     def openapi() -> dict:
         if app.openapi_schema is not None:
             return app.openapi_schema
         schema = generate_openapi()
+        # Runtime accepts omission until after authentication, then returns 400.
+        guide = schema["paths"]["/v1/models/{model_id}/guide"]["get"]
+        for parameter in guide["parameters"]:
+            if parameter["name"] == "mode" and parameter["in"] == "query":
+                parameter.update(required=True, schema={"type": "string", "title": "Mode"})
         components = schema["components"]["schemas"]
         names = dict(_COMPONENT_SCHEMA_NAMES)
         prefix = "#/components/schemas/"
