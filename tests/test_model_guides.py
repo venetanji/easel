@@ -5,6 +5,7 @@ from tests.test_app import build
 
 
 @pytest.mark.parametrize('model,mode,fragment', [
+    ('moss-image-base', 'generation', 'CPU text encoding'),
     ('qwen-image-2.1', 'generation', 'alpha channel'),
     ('qwen-image-2.1', 'editing', 'input order'),
     ('minimax-h3', 'base', 'integrated_multimodal_description:'),
@@ -34,6 +35,7 @@ def test_guide_requires_existing_auth():
 
 
 @pytest.mark.parametrize('model,mode', [
+    ('moss-image-base', 'editing'),
     ('ltx-2.3', 'base'), ('minimax-h3', 'editing'), ('qwen-image-2.1', 'base'),
     ('qwen-image-2.1-pro', 'generation'), ('unknown', 'generation'),
     ('minimax-h3', 'temporal'), ('minimax-h3', ''),

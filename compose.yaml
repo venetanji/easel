@@ -7,6 +7,7 @@ services:
       # Reachable over tailscale-mesh by container name (docker DNS on that network).
       COMFY_URL_IMAGE: ${COMFY_URL_IMAGE:-${COMFY_URL_FLUX:-http://comfy-docker-tailscale-serve-1:8188}}
       COMFY_URL_VIDEO: ${COMFY_URL_VIDEO:-http://comfy-docker-tailscale-serve-video-1:8188}
+      MOSS_IMAGE_MODEL_PATH: ${MOSS_IMAGE_MODEL_PATH:-/app/ComfyUI/models/moss-image/MOSS-Image-Base}
       EASEL_API_KEY: ${EASEL_API_KEY:-}
       EASEL_TRUSTED_CLIENT_CIDRS: ${EASEL_TRUSTED_CLIENT_CIDRS-127.0.0.0/8,::1/128,100.64.0.0/10,fd7a:115c:a1e0::/48}
       EASEL_TRUSTED_PROXY_CIDRS: ${EASEL_TRUSTED_PROXY_CIDRS:-}

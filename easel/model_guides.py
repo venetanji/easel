@@ -16,6 +16,16 @@ _DIALOGUE = '''Official paraphrase: For dialogue or singing use <d>[Language] ..
 _BOUNDARY = 'Guidance cannot enable an operation: discover current capabilities first. Examples are authored illustrations, not validated generations. Reviewed 2026-10-12.'
 
 _GUIDES = {
+    ('moss-image-base', 'generation'): {
+        'text': '''Easel recommendation for MOSS-Image-Base text-to-image: Describe the subject, composition, environment, lighting and style. Quote any visible text exactly. Upstream also accepts tag sequences and JSON layout descriptions; use its user guide for the layout grammar rather than inventing field names.
+Sampling follows the official native ComfyUI example: 1024x1024, 50 steps, CFG 3, shift 5, Euler / sgm_uniform, and negative-branch skipping at single layer 22. Easel uses FP8 transformer weights and CPU text encoding for the 12 GB image GPU. CPU text encoding still requires substantial host RAM; start with one image. Easel serves generation only: no reference images, edits, variations or video-server routing for this model.
+Authored example: A small red ceramic teapot on a walnut table beside a rainy window, soft overcast daylight, gentle steam, detailed glaze, editorial product photograph.
+Reviewed 2026-10-17. Examples illustrate prompting; they are not quality guarantees.''',
+        'sources': [
+            'https://github.com/OpenMOSS/MOSS-Image/blob/c1355e6b1986dfe8fba3c0455783a05899212342/USERGUIDE.md',
+            'https://github.com/OpenMOSS/MOSS-Image/blob/c1355e6b1986dfe8fba3c0455783a05899212342/comfyui/moss-image/example_workflows/moss-image-api.json',
+        ],
+    },
     ('qwen-image-2.1', 'generation'): {
         'text': '''Easel recommendation for native Qwen-Image-2.1 generation (no input image): Describe the subject, arrangement, environment, lighting and visual style. Specify visible text exactly. For transparency explicitly request RGBA, an alpha channel and a transparent background.
 Official basis: The model card demonstrates descriptive generation, quoted text and transparency; it does not prescribe a universal named-field layout.

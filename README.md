@@ -88,6 +88,11 @@ Suno credits.
 
 - `POST /v1/images/generations` takes JSON: for example,
   `{"model":"qwen-image-2.1","prompt":"A watercolor lighthouse at sunrise","response_format":"url"}`.
+- Use `"model":"moss-image-base"` for native MOSS generation on the image backend.
+  It defaults to 50 steps with FP8 DiT weights and CPU text encoding for a 12 GB
+  GPU. Install the OpenMOSS native nodes and the full HF model directory first;
+  set `MOSS_IMAGE_MODEL_PATH` if the ComfyUI container uses a nondefault path.
+  MOSS does not support edits, variations, or `server:"video"`.
 - `/v1/images/edits` takes multipart `prompt` plus reference `image` uploads.
   `/v1/images/variations` takes an `image` upload and uses the server's variation
   instruction. Swagger includes body fields for all three routes.
