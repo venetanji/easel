@@ -98,7 +98,7 @@ async def test_audio_discovery_is_optional_and_independent_of_video(audio_client
     client, backend = audio_client
     response = await client.get("/v1/models")
     assert [model["id"] for model in response.json()["data"]] == [
-        "qwen-image-2.1", "suno-music", "suno-speech", "suno-sound",
+        "qwen-image-2.1", "moss-image-base", "suno-music", "suno-speech", "suno-sound",
     ]
     music = next(entry for entry in response.json()["data"] if entry["id"] == "suno-music")
     assert music["models_url"] == "http://easel/v1/audio/models"

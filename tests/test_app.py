@@ -98,7 +98,7 @@ def test_models_list_shape():
     body = r.json()
     assert body["object"] == "list"
     ids = {m["id"] for m in body["data"]}
-    assert ids == {"qwen-image-2.1"}
+    assert ids == {"qwen-image-2.1", "moss-image-base"}
     for m in body["data"]:
         assert m["object"] == "model" and "created" in m and "owned_by" in m
 

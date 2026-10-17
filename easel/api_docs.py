@@ -73,9 +73,16 @@ _IMAGE_PROPERTIES = {
     "response_format": {"type": "string", "enum": ["b64_json", "url"],
                         "description": "Omitting this uses EASEL_DEFAULT_RESPONSE_FORMAT (normally b64_json). URLs require authentication."},
     "server": {"type": "string", "enum": ["image", "video"], "default": "image",
-               "description": "ComfyUI backend for this image job. video requires COMFY_URL_VIDEO; this does not change the selected image model."},
-    "steps": {"type": "integer", "description": "Sampling steps; omitted values use the model/server default (25 for Qwen Image 2.1)."},
+               "description": "ComfyUI backend for this image job. MOSS-Image-Base requires image. Other models may use video when COMFY_URL_VIDEO is configured."},
+    "steps": {"type": "integer", "description": "Sampling steps; defaults to 25 for Qwen Image 2.1 or 50 for MOSS-Image-Base."},
     "seed": {"type": "integer", "description": "Optional sampling seed; omit to choose one automatically."},
+}
+
+_EDIT_IMAGE_PROPERTIES = {
+    **_IMAGE_PROPERTIES,
+    "model": {**_IMAGE_PROPERTIES["model"], "enum": [
+        model for model, spec in MODELS.items() if spec.backend != "moss_image"
+    ]},
 }
 
 _PREFER_PARAMETER = {
@@ -107,7 +114,7 @@ ROUTE_DOCS = {
     ("GET", "/v1/models/{model_id}/guide"): {
         "tags": ["Models"], "summary": "Read a reviewed model prompt guide",
         "description": "Read-only curated guidance; never submits generation or checks upstream readiness. "
-                       "Explicit modes: qwen-image-2.1 generation/editing; minimax-h3 base/reference. "
+                       "Explicit modes: qwen-image-2.1 generation/editing; moss-image-base generation; minimax-h3 base/reference. "
                        "Unknown or unreviewed pairs return 404. The version-1 JSON envelope contains "
                        "version, guide_id, model, mode, text and official source URLs in sources, "
                        "bounded to 16 KiB. Discover capabilities separately before selecting operations. "
@@ -122,7 +129,7 @@ ROUTE_DOCS = {
     },
     ("POST", "/v1/images/generations"): {
         "tags": ["Images"], "summary": "Generate images from a prompt",
-        "description": "Send JSON with a required `prompt`. Optional model, size, batch, sampling, backend, and output-format fields are shown below. The configured prompt separator (normally `|||`) can fan out up to 16 prompts.\n\n" + _ASYNC_IMAGES,
+        "description": "Send JSON with a required `prompt`. Choose qwen-image-2.1 (default) or moss-image-base (generation only, image backend only). MOSS uses FP8 transformer weights and CPU text encoding; start with n=1 on a 12 GB GPU and allow sufficient host RAM. Optional model, size, batch, sampling, backend, and output-format fields are shown below. The configured prompt separator (normally `|||`) can fan out up to 16 prompts.\n\n" + _ASYNC_IMAGES,
         "openapi_extra": _image_body("application/json", {
             "prompt": {"type": "string", "minLength": 1, "description": "Describe the image to generate."},
             **_IMAGE_PROPERTIES,
@@ -139,7 +146,7 @@ ROUTE_DOCS = {
             "image": {"type": "array", "minItems": 1, "maxItems": MAX_REFERENCES,
                       "items": {"type": "string", "format": "binary"},
                       "description": "Reference image uploads. Repeat this field for multiple references; image[] is an accepted alias."},
-            **_IMAGE_PROPERTIES,
+            **_EDIT_IMAGE_PROPERTIES,
         }, ["prompt", "image"]),
     },
     ("POST", "/v1/images/variations"): {
@@ -147,7 +154,7 @@ ROUTE_DOCS = {
         "description": "Send a multipart `image` upload (`image[]` is also accepted). Only the first supplied image is used. Easel uses its configured variation instruction; a caller-supplied `prompt` is not used. Omit size or use `auto` to derive it from the reference.\n\n" + _ASYNC_IMAGES,
         "openapi_extra": _image_body("multipart/form-data", {
             "image": {"type": "string", "format": "binary", "description": "Source image for the variation."},
-            **_IMAGE_PROPERTIES,
+            **_EDIT_IMAGE_PROPERTIES,
         }, ["image"]),
     },
     ("GET", "/v1/images/jobs/{job_id}"): {

@@ -85,6 +85,15 @@ earlier MIT grants, or declare that all files share one copyright owner.
    Downloading or using them requires review of the relevant asset terms;
    permission for the gateway code is not permission for every referenced asset.
 
+MOSS-Image graph reference
+--------------------------
+The authored easel/moss_graph.py graph builder follows OpenMOSS/MOSS-Image's
+native ComfyUI example at c1355e6b1986dfe8fba3c0455783a05899212342,
+comfyui/moss-image/example_workflows/moss-image-api.json (Apache-2.0).
+The reference license is retained in licenses/MOSS-Image-Apache-2.0.txt.
+Easel adds FP8/CPU defaults, its own API routing and output handling. It does
+not bundle OpenMOSS node implementation code or model weights.
+
 Provenance limits
 -----------------
 The owner confirmation resolves ownership of the Python generator. It is not

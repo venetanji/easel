@@ -35,6 +35,7 @@ from .api_docs import API_DESCRIPTION, ROUTE_DOCS, TAGS, configure_openapi
 from .suno_client import SunoClient
 from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
+from .moss_graph import MODEL_PATH as MOSS_MODEL_PATH, text_to_image as moss_text_to_image
 from .video_graph import VIDEO_MODEL_ID, parse_video_size, text_to_video
 from .video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id, video_timing
 from .video_sizing import VideoLimits, VideoSizingError
@@ -368,15 +369,29 @@ async def read_video_job(comfy: ComfyClient, video_id: str,
     return None
 
 
-def build_generation_graph(spec: ModelSpec, *, prompt, width, height, steps, batch_size, seed):
+def build_generation_graph(spec: ModelSpec, *, prompt, width, height, steps, batch_size, seed,
+                           moss_model_path=MOSS_MODEL_PATH):
+    if spec.backend == "moss_image":
+        return moss_text_to_image(
+            model_path=moss_model_path, prompt=prompt, width=width, height=height,
+            steps=steps, batch_size=batch_size, seed=seed,
+        )
     return qwen_text_to_image(
         unet_name=spec.unet, clip_name=spec.clip, vae_name=spec.vae, prompt=prompt,
         width=width, height=height, steps=steps, batch_size=batch_size, seed=seed,
     )
 
 
+def require_edit_support(spec: ModelSpec):
+    if spec.backend == "moss_image":
+        raise APIError(400, "moss-image-base supports text-to-image generation only; "
+                       "editing and variations are not supported", param="model",
+                       code="unsupported_operation")
+
+
 def build_edit_graph(spec: ModelSpec, *, image_filenames, prompt, width, height, steps,
                      batch_size, seed):
+    require_edit_support(spec)
     return qwen_reference_edit(
         unet_name=spec.unet, clip_name=spec.clip, vae_name=spec.vae,
         image_filenames=image_filenames, prompt=prompt, width=width, height=height,
@@ -956,6 +971,9 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             raise APIError(400, "prompt is required", param="prompt")
         spec = resolve_spec(body.get("model"))
         server = resolve_server(body.get("server"), settings)
+        if spec.backend == "moss_image" and server != "image":
+            raise APIError(400, "moss-image-base runs on the image server only", param="server",
+                           code="unsupported_parameter")
         n = parse_n(body.get("n"))
         rf = resolve_response_format(body.get("response_format"), settings)
         size = parse_size_or_400(body.get("size"))
@@ -967,6 +985,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             width=width, height=height,
             steps=steps,
             batch_size=batch, seed=int_opt(body.get("seed"), None),
+            moss_model_path=settings.moss_model_path,
         )
         async with image_admission(request, server, rf, body.get("model") or DEFAULT_MODEL) as job_id:
             return await image_request_response(request, graph, rf, server, job_id)
@@ -986,6 +1005,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         if not prompt:
             raise APIError(400, "prompt is required", param="prompt")
         spec = resolve_spec(form_str(form, "model"))
+        require_edit_support(spec)
         server = resolve_server(form_str(form, "server"), settings)
         if spec.backend == "qwen_image_2_1" and len(images) > MAX_REFERENCES:
             raise APIError(
@@ -1018,6 +1038,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         if not images:
             raise APIError(400, "an image is required", param="image")
         spec = resolve_spec(form_str(form, "model"))
+        require_edit_support(spec)
         server = resolve_server(form_str(form, "server"), settings)
         n = parse_n(form_str(form, "n"))
         rf = resolve_response_format(form_str(form, "response_format"), settings)

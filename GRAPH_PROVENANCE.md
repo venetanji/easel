@@ -1,5 +1,20 @@
 # Graph reuse and compatibility boundary
 
+## MOSS-Image
+
+`easel/moss_graph.py` is an authored native graph builder following the public
+OpenMOSS ComfyUI API example, not a vendored model or pipeline implementation.
+Reference: OpenMOSS/MOSS-Image commit
+`c1355e6b1986dfe8fba3c0455783a05899212342`,
+`comfyui/moss-image/example_workflows/moss-image-api.json` (Apache-2.0).
+The HF loader output slots are MODEL=0, CLIP=1 and VAE=2. Changes from the
+example are FP8 DiT / CPU text defaults, configurable server-local model path,
+Easel output prefixes, runtime seeds, batches and existing prompt fan-out.
+The Apache-2.0 text is retained in `licenses/MOSS-Image-Apache-2.0.txt`.
+The external native nodes and model weights are not distributed by Easel.
+
+## Existing Graphs
+
 Easel keeps HTTP/authentication, queue admission, receipts and request validation
 separate from its Python ComfyUI graph builders. JavaScript/CLI consumers use the
 same HTTP contract. They do not need a port of the graph builder.

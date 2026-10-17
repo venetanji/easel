@@ -9,6 +9,7 @@ from typing import Literal
 from urllib.parse import urlsplit
 
 from .video_sizing import DEFAULT_MAX_PIXELS, DEFAULT_MAX_PIXEL_FRAMES, VideoLimits
+from .moss_graph import MODEL_PATH as MOSS_MODEL_PATH
 
 Network = IPv4Network | IPv6Network
 DEFAULT_TRUSTED_CLIENT_CIDRS = "127.0.0.0/8,::1/128,100.64.0.0/10,fd7a:115c:a1e0::/48"
@@ -20,9 +21,9 @@ def parse_networks(value: str) -> tuple[Network, ...]:
 
 @dataclass(frozen=True)
 class ModelSpec:
-    unet: str
-    clip: str
-    backend: Literal["qwen_image_2_1"] = "qwen_image_2_1"
+    unet: str | None = None
+    clip: str | None = None
+    backend: Literal["qwen_image_2_1", "moss_image"] = "qwen_image_2_1"
     vae: str | None = None
     default_steps: int | None = None
 
@@ -36,6 +37,7 @@ MODELS = {
         vae="qwen_image_2.1_vae_bf16.safetensors",
         default_steps=25,
     ),
+    "moss-image-base": ModelSpec(backend="moss_image", default_steps=50),
 }
 
 # Image API dimension constraints.
@@ -114,6 +116,7 @@ class Settings:
     trusted_proxy_networks: tuple[Network, ...] = ()
     require_auth_networks: tuple[Network, ...] = ()
     public_url: str | None = None
+    moss_model_path: str = MOSS_MODEL_PATH
 
     def __post_init__(self):
         VideoLimits(self.video_max_pixels, self.video_max_pixel_frames)
@@ -151,4 +154,5 @@ class Settings:
             trusted_proxy_networks=parse_networks(env.get("EASEL_TRUSTED_PROXY_CIDRS", "")),
             require_auth_networks=parse_networks(env.get("EASEL_REQUIRE_AUTH_CIDRS", "")),
             public_url=_clean(env.get("EASEL_PUBLIC_URL")),
+            moss_model_path=_clean(env.get("MOSS_IMAGE_MODEL_PATH")) or MOSS_MODEL_PATH,
         )

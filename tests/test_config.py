@@ -16,7 +16,7 @@ def test_resolve_known_models():
 
 
 def test_model_table_ids():
-    assert set(MODELS) == {"qwen-image-2.1"}
+    assert set(MODELS) == {"qwen-image-2.1", "moss-image-base"}
 
 
 @pytest.mark.parametrize("model", ["flux2-9b", "flux2-4b", "flux-2.5"])

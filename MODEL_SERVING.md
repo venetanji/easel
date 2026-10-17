@@ -1,12 +1,12 @@
 # Model Serving and Queue Admission
 
-This server revision advertises `qwen-image-2.1`, `ltx-2.5`, and `minimax-h3`
+This server revision advertises `qwen-image-2.1`, `moss-image-base`, `ltx-2.5`, and `minimax-h3`
 when `COMFY_URL_VIDEO` is configured. Image requests with an omitted/blank model
 use Qwen; video requests require an explicit `ltx-2.5` or `minimax-h3` model.
 This describes code support, not independently verified deployment state.
 `flux2-9b`, `flux2-4b` and `flux-2.5` are not accepted for new generation, editing
 or variation requests. Adapter choices do not create additional base models.
-If `COMFY_URL_VIDEO` is not configured, Qwen is the only ComfyUI model advertised.
+If `COMFY_URL_VIDEO` is not configured, Qwen and MOSS are the ComfyUI models advertised.
 Setting `SUNO_URL` independently adds `suno-music`, `suno-speech`, and `suno-sound`.
 These audio routing IDs use the separate Suno REST/browser backend, not ComfyUI;
 see [AUDIO_API.md](AUDIO_API.md) for options, status polling and saved audio.
@@ -15,6 +15,40 @@ Qwen uses its matching INT8 transformer/text encoder, BF16 VAE and 25 sampling
 steps unless a request supplies `steps`. The old global eight-step Flux default
 does not override Qwen's model-specific default. LTX retains its distilled 8+3
 sampling passes and existing video/adapter contracts.
+
+## MOSS-Image-Base
+
+MOSS supports `/v1/images/generations` only, with synchronous and durable async
+responses, existing `n` batching, prompt-separator fan-out, sizes, steps and seeds.
+Omitting `model` still selects Qwen. MOSS edits and variations are rejected before
+upload or submission; explicit `server:"video"` is rejected to keep the model on
+the image GPU rather than the video batch server.
+
+Install the native `comfyui/moss-image` plugin from OpenMOSS/MOSS-Image. The HF
+model must already exist on the ComfyUI host at
+`/app/ComfyUI/models/moss-image/MOSS-Image-Base`, including `transformer/`,
+`text_encoder/`, `tokenizer/`, and `vae/`. `MOSS_IMAGE_MODEL_PATH` changes the path
+sent to ComfyUI, not a path within the Easel container. No weights or plugin code
+are downloaded by Easel. Mount configuration therefore belongs to ComfyUI.
+
+The graph follows upstream commit `c1355e6b1986dfe8fba3c0455783a05899212342`:
+50 steps, CFG 3, shift 5 before Simple SLG (single layer 22), Euler / sgm_uniform,
+and FP32 VAE decoding. The low-VRAM preset changes the HF loader to
+`weight_dtype="fp8_e4m3fn"` and `text_device="cpu"`. The roughly 16 GiB text
+encoder remains in host RAM; a free GPU alone is insufficient on a busy host.
+Start with one image, and consider a longer `COMFY_JOB_TIMEOUT` for a cold load.
+Discovery advertises code support, not installed assets or a memory guarantee.
+Read `/v1/models/moss-image-base/guide?mode=generation` for prompt guidance.
+
+On 2026-10-17 the equivalent creative-comfy-graph workflow completed one
+1024x1024, 50-step, seed-42 image on an RTX 3080 Ti (12 GiB) in about 90 seconds,
+with sampled whole-GPU memory peaking at 6008 MiB. The separate RTX 3090 ComfyUI
+process was not restarted or interrupted. This validates one configuration, not
+every image size or batch; the live Easel service is not redeployed by this PR.
+The Easel branch's actual `/v1/images/generations` route was also exercised
+against that ComfyUI instance: a 512x512, four-step, seed-43 request returned
+HTTP 200 and a valid PNG in about nine seconds. This used an isolated local
+app instance and did not change the running Easel container.
 
 Qwen edits and variations preserve reference alpha by rejoining `LoadImage`'s
 RGB and mask outputs with the standard ComfyUI `JoinImageWithAlpha` node before

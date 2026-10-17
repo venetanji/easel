@@ -24,7 +24,9 @@ def serving_app(tmp_path, image, video=None, shared=False):
 def test_discovery_exposes_qwen_ltx_and_h3_when_video_is_configured(tmp_path):
     app = serving_app(tmp_path, QueuedComfy(), QueuedComfy())
     response = TestClient(app).get("/v1/models")
-    assert [model["id"] for model in response.json()["data"]] == ["qwen-image-2.1", "ltx-2.5", "minimax-h3"]
+    assert [model["id"] for model in response.json()["data"]] == [
+        "qwen-image-2.1", "moss-image-base", "ltx-2.5", "minimax-h3",
+    ]
 
 
 @pytest.mark.parametrize("model", ["flux2-9b", "flux2-4b", "flux-2.5"])
