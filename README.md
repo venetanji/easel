@@ -88,9 +88,17 @@ Suno credits.
 
 - `POST /v1/images/generations` takes JSON: for example,
   `{"model":"qwen-image-2.1","prompt":"A watercolor lighthouse at sunrise","response_format":"url"}`.
+- Select `moss-image-base` to use the installed MOSS HF plugin for text-to-image.
+  Start with `size: "512x512"`, `steps: 20`, `n: 1` and a seed for a quick test;
+  defaults are 1024x1024 and 50 steps. CPU text encoding needs about 16 GiB of
+  host RAM. See [Model serving](MODEL_SERVING.md) for required nodes/assets.
+- Select `moss-image-sft-8step` for the matching SFT model with the lodestones
+  DMD LoRA: eight steps by default, strength 1, CFG 1, no SLG, BF16 diffusion
+  weights and CPU text encoding. Start with `n: 1`; 1024x1024 is verified.
 - `/v1/images/edits` takes multipart `prompt` plus reference `image` uploads.
   `/v1/images/variations` takes an `image` upload and uses the server's variation
-  instruction. Swagger includes body fields for all three routes.
+  instruction. These reference operations require Qwen; MOSS models reject them.
+  Swagger includes body fields for all three routes.
 - Set the optional **Prefer** header to `respond-async` for durable jobs.
   Save the HTTP 202 receipt's ID, poll its `Location` with the same bearer key,
   and wait for `completed`, `failed`, or `cancelled`. Completed `data` contains

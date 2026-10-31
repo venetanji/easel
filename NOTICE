@@ -85,6 +85,24 @@ earlier MIT grants, or declare that all files share one copyright owner.
    Downloading or using them requires review of the relevant asset terms;
    permission for the gateway code is not permission for every referenced asset.
 
+5. MOSS-Image HF plugin workflow
+
+   easel/moss_graph.py adapts the MOSS-Image Base API workflow from OpenMOSS:
+   https://github.com/OpenMOSS/MOSS-Image/blob/c1355e6b1986dfe8fba3c0455783a05899212342/comfyui/moss-image/example_workflows/moss-image-api.json
+   tests/fixtures/moss/plugin-api.json preserves that workflow with JSON
+   formatting and Unicode escape changes only. Retained upstream license:
+   Apache License, Version 2.0, in licenses/MOSS-Image-Apache-2.0.txt.
+   License source:
+   https://github.com/OpenMOSS/MOSS-Image/blob/c1355e6b1986dfe8fba3c0455783a05899212342/LICENSE
+   Easel modifications (31 October 2026): its own graph helper, node numbering,
+   installed HF path, FP8 loading, CPU text encoding, configurable prompt/size/
+   batch/steps/seed, prompt fan-out, and generation-only API integration.
+   No plugin Python source or model weights are bundled. The application grant
+   does not replace upstream permissions on workflow-derived portions.
+   The MOSS SFT eight-step profile references lodestones' separately downloaded
+   DMD LoRA and official OpenMOSS SFT weights; their Apache-2.0 asset terms are
+   separate. No adapter tensors, demo code or custom data-space sampler is bundled.
+
 Provenance limits
 -----------------
 The owner confirmation resolves ownership of the Python generator. It is not

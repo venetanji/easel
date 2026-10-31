@@ -1,12 +1,13 @@
 # Model Serving and Queue Admission
 
-This server revision advertises `qwen-image-2.1`, `ltx-2.5`, and `minimax-h3`
+This server revision advertises image models `qwen-image-2.1`,
+`moss-image-base` and `moss-image-sft-8step`, plus `ltx-2.5` and `minimax-h3`
 when `COMFY_URL_VIDEO` is configured. Image requests with an omitted/blank model
 use Qwen; video requests require an explicit `ltx-2.5` or `minimax-h3` model.
 This describes code support, not independently verified deployment state.
 `flux2-9b`, `flux2-4b` and `flux-2.5` are not accepted for new generation, editing
 or variation requests. Adapter choices do not create additional base models.
-If `COMFY_URL_VIDEO` is not configured, Qwen is the only ComfyUI model advertised.
+Without `COMFY_URL_VIDEO`, neither video model is advertised.
 Setting `SUNO_URL` independently adds `suno-music`, `suno-speech`, and `suno-sound`.
 These audio routing IDs use the separate Suno REST/browser backend, not ComfyUI;
 see [AUDIO_API.md](AUDIO_API.md) for options, status polling and saved audio.
@@ -15,6 +16,87 @@ Qwen uses its matching INT8 transformer/text encoder, BF16 VAE and 25 sampling
 steps unless a request supplies `steps`. The old global eight-step Flux default
 does not override Qwen's model-specific default. LTX retains its distilled 8+3
 sampling passes and existing video/adapter contracts.
+
+## MOSS-Image Base
+
+Use `model: "moss-image-base"` on `/v1/images/generations`, preferably with
+`Prefer: respond-async`. This backend reuses the installed OpenMOSS HF-directory
+plugin, not the newer native SFT loaders. ComfyUI must expose `MOSSImageHFLoader`,
+`CLIPTextEncode`, `EmptyFlux2LatentImage`, `ModelSamplingSD3`,
+`SkipLayerGuidanceDiTSimple`, `KSampler`, `VAEDecode`, and `SaveImage`.
+Prompt fan-out also requires `SimplePromptBatcher`.
+
+The model directory is `/app/ComfyUI/models/moss-image/MOSS-Image-Base` inside
+ComfyUI, containing `transformer/`, `text_encoder/`, `tokenizer/`, and `vae/`.
+The registry owns this path; clients cannot supply arbitrary model paths.
+Weights are not downloaded automatically. The existing directory occupies
+about 26 GiB. FP8 diffusion loading and CPU text encoding fit the image GPU;
+the text encoder alone needs about 16 GiB of host RAM. Start with batch size 1.
+The recipe uses CFG 3, shift 5, Euler / sgm_uniform, Simple SLG layer 22, and
+50 steps by default. The common size, seed, steps, n, separator, server and
+response-format controls apply; default size is 1024x1024.
+
+Edits and variations return `400 unsupported_operation` before uploads,
+admission or submission. Native layout prompting and edit LoRAs are not
+integrated. SFT is available through the distilled profile described next.
+Read `/v1/models/moss-image-base/guide?mode=generation` for guidance.
+The 31 October direct ComfyUI smoke completed at 512x512, 20 steps and seed 42
+in 34.851 seconds. After deployment, an authenticated public async request
+with omitted size/steps completed a fresh 1024x1024, 50-step, seed-43 generation
+in 57.76 seconds of ComfyUI execution and served a valid 519346-byte PNG.
+These runs do not establish every size/batch or pixel-art/transparency quality.
+See [GRAPH_PROVENANCE.md](GRAPH_PROVENANCE.md).
+
+## MOSS SFT Eight-Step DMD
+
+Use `model: "moss-image-sft-8step"` on `/v1/images/generations`. This curated
+profile applies the user's selected
+[lodestones lora.safetensors](https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd/blob/f95df83b5e90ae91ea412434b3f9b7f1c8c6314f/lora.safetensors)
+at strength **1.0** to the matching **SFT** transformer. It uses 8 steps by
+default, CFG **1**, shift 5, Euler / sgm_uniform and **no SLG**. Diffusion weights
+are loaded as BF16 so small adapter changes are not rounded into FP8 weights;
+text encoding remains on CPU. The normal image size, steps, seed, batch,
+separator, backend and durable async receipt controls apply. Default size is
+1024x1024. LoRA choice/strength and guidance are fixed by the profile.
+
+ComfyUI additionally needs `LoraLoaderModelOnly` and these local assets:
+
+- `/app/ComfyUI/models/moss-image/MOSS-Image-SFT/transformer/`: the three official
+  SFT BF16 shards, config and index at revision
+  `f972bd4b4b9e3852133cc5da954d87bc32cd8fb9`.
+- The SFT directory's `text_encoder`, `tokenizer` and `vae` are relative symlinks
+  to `../MOSS-Image-Base/` components. Their repository blobs match SFT, so no
+  second copy is needed. Keep that shared Base directory when using this profile.
+- `models/loras/moss_image_sft_8steps_dmd.safetensors`: `lora.safetensors` from
+  `lodestones/MOSS-Image-SFT-8-steps-dmd@f95df83b5e90ae91ea412434b3f9b7f1c8c6314f`,
+  SHA-256 `4abb14e39c1a59018907581e609f43616ec6810126144ec2b1d2e6f8969628fe`.
+
+Additional weight storage is about 10.6 GiB. Assets are not downloaded by Easel;
+the installed SFT shards and adapter were verified against their repository
+SHA-256 values. The similarly named `lora_latest.safetensors` recommends a
+different strength and is not used here. The model card's deprecated custom
+data-space loop and extra generator/time-embedding files are not used.
+
+A 1024x1024, seed-43 test applied all 252 rank-128 adapter modules and completed
+eight-step generation in 30.403 seconds including cold loading and CPU text
+encoding. A same-prompt SFT BF16 50-step/CFG-3 control completed in 57.158 seconds;
+an eight-step/CFG-1 control without the LoRA completed in 5.310 seconds but had
+softer, less defined character details. These are illustrative single-seed
+observations; the author labels the adapter work in progress. Cold and warm
+execution times are different and should not be treated as a direct speedup.
+
+After deployment, a fresh seed-44 public authenticated API request omitted
+size and steps and ran at 1024x1024/eight steps. ComfyUI execution took **6.679
+seconds** with model/text caches warm, and polling plus authenticated PNG
+retrieval took about nine seconds after acceptance. KSampler was not cached.
+This warm observation is about 8.6 times faster than the single warm 50-step
+SFT control; it is not a throughput estimate or a quality-equivalence claim.
+
+Only generation is integrated. Edits and variations reject before uploads;
+native layout controls, edit adapters and universal quality equivalence are not
+established. Read `/v1/models/moss-image-sft-8step/guide?mode=generation`.
+
+## Qwen Editing And Video
 
 Qwen edits and variations preserve reference alpha by rejoining `LoadImage`'s
 RGB and mask outputs with the standard ComfyUI `JoinImageWithAlpha` node before

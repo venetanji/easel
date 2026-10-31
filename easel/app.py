@@ -35,6 +35,7 @@ from .api_docs import API_DESCRIPTION, ROUTE_DOCS, TAGS, configure_openapi
 from .suno_client import SunoClient
 from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
 from .qwen_graph import text_to_image as qwen_text_to_image
+from .moss_graph import text_to_image as moss_text_to_image
 from .video_graph import VIDEO_MODEL_ID, parse_video_size, text_to_video
 from .video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id, video_timing
 from .video_sizing import VideoLimits, VideoSizingError
@@ -369,14 +370,27 @@ async def read_video_job(comfy: ComfyClient, video_id: str,
 
 
 def build_generation_graph(spec: ModelSpec, *, prompt, width, height, steps, batch_size, seed):
+    if spec.backend == "moss_image_hf":
+        return moss_text_to_image(
+            model_path=spec.hf_model_path, prompt=prompt, width=width, height=height,
+            steps=steps, batch_size=batch_size, seed=seed, distilled_lora=spec.distilled_lora,
+        )
     return qwen_text_to_image(
         unet_name=spec.unet, clip_name=spec.clip, vae_name=spec.vae, prompt=prompt,
         width=width, height=height, steps=steps, batch_size=batch_size, seed=seed,
     )
 
 
+def require_edit_support(spec: ModelSpec):
+    if not spec.supports_edits:
+        raise APIError(400, "This model supports text-to-image generation only; "
+                            "edits and variations are not supported",
+                       code="unsupported_operation", param="model")
+
+
 def build_edit_graph(spec: ModelSpec, *, image_filenames, prompt, width, height, steps,
                      batch_size, seed):
+    require_edit_support(spec)
     return qwen_reference_edit(
         unet_name=spec.unet, clip_name=spec.clip, vae_name=spec.vae,
         image_filenames=image_filenames, prompt=prompt, width=width, height=height,
@@ -986,6 +1000,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         if not prompt:
             raise APIError(400, "prompt is required", param="prompt")
         spec = resolve_spec(form_str(form, "model"))
+        require_edit_support(spec)
         server = resolve_server(form_str(form, "server"), settings)
         if spec.backend == "qwen_image_2_1" and len(images) > MAX_REFERENCES:
             raise APIError(
@@ -1018,6 +1033,7 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         if not images:
             raise APIError(400, "an image is required", param="image")
         spec = resolve_spec(form_str(form, "model"))
+        require_edit_support(spec)
         server = resolve_server(form_str(form, "server"), settings)
         n = parse_n(form_str(form, "n"))
         rf = resolve_response_format(form_str(form, "response_format"), settings)

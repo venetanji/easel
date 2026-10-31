@@ -19,6 +19,7 @@ def test_package_declares_scoped_gpl_and_includes_license_materials():
     assert {
         "LICENSE", "NOTICE", "licenses/creative-skills-MIT.txt",
         "licenses/comfy-workflow-templates-MIT.txt", "licenses/ComfyUI-GPL-3.0.txt",
+        "licenses/MOSS-Image-Apache-2.0.txt",
     } <= included
 
 
@@ -72,6 +73,6 @@ def test_container_copies_license_and_readme_materials_before_build():
 
 
 def test_graph_modules_point_to_retained_notices():
-    for name in ("flux_graph.py", "workflow_graph.py", "h3_graph.py", "video_graph.py"):
+    for name in ("flux_graph.py", "workflow_graph.py", "h3_graph.py", "video_graph.py", "moss_graph.py"):
         source = (ROOT / "easel" / name).read_text()
         assert "NOTICE" in source, f"Keep license provenance visible in {name}"

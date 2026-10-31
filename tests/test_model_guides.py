@@ -7,6 +7,8 @@ from tests.test_app import build
 @pytest.mark.parametrize('model,mode,fragment', [
     ('qwen-image-2.1', 'generation', 'alpha channel'),
     ('qwen-image-2.1', 'editing', 'input order'),
+    ('moss-image-base', 'generation', 'CPU text encoding'),
+    ('moss-image-sft-8step', 'generation', 'LoRA strength 1'),
     ('minimax-h3', 'base', 'integrated_multimodal_description:'),
     ('minimax-h3', 'reference', 'subject_definitions:'),
 ])
@@ -37,6 +39,8 @@ def test_guide_requires_existing_auth():
     ('ltx-2.3', 'base'), ('minimax-h3', 'editing'), ('qwen-image-2.1', 'base'),
     ('qwen-image-2.1-pro', 'generation'), ('unknown', 'generation'),
     ('minimax-h3', 'temporal'), ('minimax-h3', ''),
+    ('moss-image-base', 'editing'), ('moss-image-base', 'layout'),
+    ('moss-image-sft-8step', 'editing'), ('moss-image-sft-8step', 'layout'),
 ])
 def test_unreviewed_guide_is_404(model, mode):
     client, _ = build()

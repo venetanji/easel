@@ -33,6 +33,7 @@ configured credentials.
 - **Images:** JSON generation or multipart editing/variation. Add
   `Prefer: respond-async` to receive a durable receipt, then poll its `Location`
   and retrieve completed output. Without that header, the request waits for output.
+  `moss-image-base` and `moss-image-sft-8step` support generation; use Qwen for reference editing/variation.
 - **Videos:** multipart submission, then status/queue polling and MP4 retrieval.
   LTX uses `seconds`; MiniMax H3 uses `frames` and rejects `seconds`. Check
   model-specific capabilities before selecting sizes or optional controls.
@@ -74,8 +75,15 @@ _IMAGE_PROPERTIES = {
                         "description": "Omitting this uses EASEL_DEFAULT_RESPONSE_FORMAT (normally b64_json). URLs require authentication."},
     "server": {"type": "string", "enum": ["image", "video"], "default": "image",
                "description": "ComfyUI backend for this image job. video requires COMFY_URL_VIDEO; this does not change the selected image model."},
-    "steps": {"type": "integer", "description": "Sampling steps; omitted values use the model/server default (25 for Qwen Image 2.1)."},
+    "steps": {"type": "integer", "description": "Sampling steps; omitted values use the model/server default (25 for Qwen Image 2.1, 50 for MOSS Image Base, 8 for MOSS SFT with the DMD LoRA)."},
     "seed": {"type": "integer", "description": "Optional sampling seed; omit to choose one automatically."},
+}
+
+_EDIT_IMAGE_PROPERTIES = {
+    **_IMAGE_PROPERTIES,
+    "model": {**_IMAGE_PROPERTIES["model"],
+              "enum": [name for name, spec in MODELS.items() if spec.supports_edits],
+              "description": "Image model supporting reference edits/variations. MOSS models are generation-only."},
 }
 
 _PREFER_PARAMETER = {
@@ -107,7 +115,7 @@ ROUTE_DOCS = {
     ("GET", "/v1/models/{model_id}/guide"): {
         "tags": ["Models"], "summary": "Read a reviewed model prompt guide",
         "description": "Read-only curated guidance; never submits generation or checks upstream readiness. "
-                       "Explicit modes: qwen-image-2.1 generation/editing; minimax-h3 base/reference. "
+                       "Explicit modes: qwen-image-2.1 generation/editing; moss-image-base and moss-image-sft-8step generation; minimax-h3 base/reference. "
                        "Unknown or unreviewed pairs return 404. The version-1 JSON envelope contains "
                        "version, guide_id, model, mode, text and official source URLs in sources, "
                        "bounded to 16 KiB. Discover capabilities separately before selecting operations. "
@@ -122,7 +130,7 @@ ROUTE_DOCS = {
     },
     ("POST", "/v1/images/generations"): {
         "tags": ["Images"], "summary": "Generate images from a prompt",
-        "description": "Send JSON with a required `prompt`. Optional model, size, batch, sampling, backend, and output-format fields are shown below. The configured prompt separator (normally `|||`) can fan out up to 16 prompts.\n\n" + _ASYNC_IMAGES,
+        "description": "Send JSON with a required `prompt`. Choose qwen-image-2.1, moss-image-base or moss-image-sft-8step. MOSS uses the installed HF plugin with CPU text encoding; start with n=1. The SFT 8-step profile fixes the lodestones DMD LoRA at strength 1, BF16 weights, CFG 1 and no SLG. Optional model, size, batch, sampling, backend, and output-format fields are shown below. The configured prompt separator (normally `|||`) can fan out up to 16 prompts.\n\n" + _ASYNC_IMAGES,
         "openapi_extra": _image_body("application/json", {
             "prompt": {"type": "string", "minLength": 1, "description": "Describe the image to generate."},
             **_IMAGE_PROPERTIES,
@@ -139,7 +147,7 @@ ROUTE_DOCS = {
             "image": {"type": "array", "minItems": 1, "maxItems": MAX_REFERENCES,
                       "items": {"type": "string", "format": "binary"},
                       "description": "Reference image uploads. Repeat this field for multiple references; image[] is an accepted alias."},
-            **_IMAGE_PROPERTIES,
+            **_EDIT_IMAGE_PROPERTIES,
         }, ["prompt", "image"]),
     },
     ("POST", "/v1/images/variations"): {
@@ -147,7 +155,7 @@ ROUTE_DOCS = {
         "description": "Send a multipart `image` upload (`image[]` is also accepted). Only the first supplied image is used. Easel uses its configured variation instruction; a caller-supplied `prompt` is not used. Omit size or use `auto` to derive it from the reference.\n\n" + _ASYNC_IMAGES,
         "openapi_extra": _image_body("multipart/form-data", {
             "image": {"type": "string", "format": "binary", "description": "Source image for the variation."},
-            **_IMAGE_PROPERTIES,
+            **_EDIT_IMAGE_PROPERTIES,
         }, ["image"]),
     },
     ("GET", "/v1/images/jobs/{job_id}"): {

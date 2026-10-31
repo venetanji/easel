@@ -4,6 +4,86 @@ Easel keeps HTTP/authentication, queue admission, receipts and request validatio
 separate from its Python ComfyUI graph builders. JavaScript/CLI consumers use the
 same HTTP contract. They do not need a port of the graph builder.
 
+## MOSS-Image Base HF plugin (31 October 2026)
+
+`easel/moss_graph.py` adapts the official plugin API workflow at
+`OpenMOSS/MOSS-Image@c1355e6b1986dfe8fba3c0455783a05899212342`,
+`comfyui/moss-image/example_workflows/moss-image-api.json`.
+The upstream workflow and the installed plugin's workflow have SHA-256
+`0b293d18872836bde5dfa9d71acd5bec613f5a805bb44e066f928ee6bb2c5995`.
+`tests/fixtures/moss/plugin-api.json` preserves its parsed JSON with ASCII
+escaping and formatting changes only. The graph test compares all settings and
+links independently of node numbering, changing the HF path, precision,
+text-encoder device, prompt and output prefix to match Easel.
+
+The source repository's Apache-2.0 license is preserved verbatim in
+`licenses/MOSS-Image-Apache-2.0.txt`, SHA-256
+`cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30`.
+No plugin implementation code is bundled. Easel adds its own graph helper,
+request-controlled dimensions/batching/seed/steps, prompt fan-out and durable
+image receipts. Reference editing and variations are rejected before uploads.
+
+This is the existing **Base HF-directory plugin**, not native MOSS SFT.
+In particular, its `ModelSamplingSD3` timestep scaling must not be carried over
+unchanged to a future native implementation. The model directory's download
+metadata records `OpenMOSS-Team/MOSS-Image-Base` revision
+`1ceede80badddd6a7812069619edaa5633587192`; this is not a runtime weight hash.
+A 512x512, 20-step, seed-42 direct ComfyUI smoke completed in 34.851 seconds
+on the 12 GiB image GPU using CPU text encoding. The PNG was visually inspected.
+This establishes basic generation, not editing, native layout support, aligned
+sprites, transparency or quality guarantees.
+Weight shard headers/lengths and index completeness were checked; no full-file
+weight hashes were calculated. ComfyUI revision was
+`b5cc8830279eae909a59de030af1e50761c36751`.
+
+After deploying Easel, the public authenticated API returned a durable HTTP 202
+receipt and served a valid 512x512 PNG for the same seed-42 graph. ComfyUI reused
+cached sampling for this first API round trip. A separate request omitted size
+and steps and used seed 43 to force fresh sampling: the runtime graph contained
+1024x1024 and 50 steps, completed in 57.76 seconds, and the authenticated job
+content route served a 519346-byte PNG. Its SHA-256 is
+`b7e2b64bddf46e63fc2629b3fddcbbfcf0e0f21a0ae48256d958792c357f347c`.
+Both POSTs were issued once and saved before polling. Unauthenticated public
+model discovery returned HTTP 401. One default-size success is not a memory or
+throughput guarantee for every request.
+
+## MOSS SFT DMD Adapter (31 October 2026)
+
+The separate `moss-image-sft-8step` registry entry uses the same HF plugin with
+the actual SFT transformer, BF16 loading, and `LoraLoaderModelOnly` at strength
+1.0. The eight-step, no-CFG recommendation comes from the pinned
+[lodestones model card](https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd/blob/f95df83b5e90ae91ea412434b3f9b7f1c8c6314f/README.md).
+Its reference
+[demo](https://huggingface.co/spaces/hugging-apps/moss-image-8-step-dmd/blob/2ff429beafaee462b97f6c34238959b19d270f05/app.py)
+confirms standard flow Euler sampling at shift 5 and says the old data-space
+loop is unused. That demo selects `lora_latest` at 0.7; this profile uses the
+user-requested **lora.safetensors at 1.0** per the model card. No demo or custom
+sampler implementation is bundled. The existing plugin uses SD3 timestep
+scaling with Euler / sgm_uniform, which does not promise exact equivalence to
+the demo's scheduler or seeds.
+
+The official SFT revision is `f972bd4b4b9e3852133cc5da954d87bc32cd8fb9`.
+All three transformer shard downloads and the selected adapter were checked
+against their Hub SHA-256 values. Base text encoder/tokenizer/VAE repository
+blobs match SFT and are reused through relative symlinks. The adapter SHA-256 is
+`4abb14e39c1a59018907581e609f43616ec6810126144ec2b1d2e6f8969628fe`.
+All 252 rank-128 adapter targets matched the SFT tensor shapes; the runtime log
+confirmed **252 patches attached**. An eight-step 1024x1024, seed-43 generation
+completed in 30.403 seconds from cold loading. Independent same-prompt/seed
+SFT controls used 50 steps/CFG 3/SLG and eight steps/CFG 1/no SLG/no LoRA.
+Saved graphs, receipts, histories and images support these observations.
+The adapter is an upstream work in progress; a crisp sample is not universal
+quality equivalence, a pixel-grid guarantee or editing support.
+
+The deployed public API then accepted a seed-44 request with omitted size/steps,
+returned HTTP 202, completed the durable receipt and served a valid 867508-byte
+1024x1024 PNG. Captured runtime inputs confirm eight steps, CFG 1, BF16 and no
+SLG; the sampler ran fresh while model/text nodes were cached. ComfyUI execution
+took 6.679 seconds; acceptance-to-polling/download was about nine seconds.
+The PNG SHA-256 is
+`9e0bdad023e03f95b5fceeb2a3bc1431a778990e62080f338f90b0ffd1cccfa0`.
+Each comparison/API POST was issued once and saved before polling.
+
 ## Licensing and maintainer confirmation
 
 On 5 October 2026 the maintainer confirmed that Comfy Graph recipes derive from

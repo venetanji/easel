@@ -20,11 +20,14 @@ def parse_networks(value: str) -> tuple[Network, ...]:
 
 @dataclass(frozen=True)
 class ModelSpec:
-    unet: str
-    clip: str
-    backend: Literal["qwen_image_2_1"] = "qwen_image_2_1"
+    unet: str | None = None
+    clip: str | None = None
+    backend: Literal["qwen_image_2_1", "moss_image_hf"] = "qwen_image_2_1"
     vae: str | None = None
     default_steps: int | None = None
+    hf_model_path: str | None = None
+    supports_edits: bool = True
+    distilled_lora: str | None = None
 
 
 # OpenAI model id -> ComfyUI files and graph settings. Only place model names are defined.
@@ -35,6 +38,19 @@ MODELS = {
         backend="qwen_image_2_1",
         vae="qwen_image_2.1_vae_bf16.safetensors",
         default_steps=25,
+    ),
+    "moss-image-base": ModelSpec(
+        backend="moss_image_hf",
+        hf_model_path="/app/ComfyUI/models/moss-image/MOSS-Image-Base",
+        default_steps=50,
+        supports_edits=False,
+    ),
+    "moss-image-sft-8step": ModelSpec(
+        backend="moss_image_hf",
+        hf_model_path="/app/ComfyUI/models/moss-image/MOSS-Image-SFT",
+        default_steps=8,
+        supports_edits=False,
+        distilled_lora="moss_image_sft_8steps_dmd.safetensors",
     ),
 }
 

@@ -135,7 +135,9 @@ def test_image_swagger_bodies_and_async_header_follow_existing_contract(client):
         assert not prefer["required"]
         media_type = "application/json" if endpoint == "generations" else "multipart/form-data"
         body = request_schema(schema, f"/v1/images/{endpoint}", media_type)
-        assert body["properties"]["model"]["enum"] == list(MODELS)
+        expected_models = list(MODELS) if endpoint == "generations" else [
+            name for name, spec in MODELS.items() if spec.supports_edits]
+        assert body["properties"]["model"]["enum"] == expected_models
         if endpoint == "generations":
             assert body["required"] == ["prompt"]
         elif endpoint == "edits":

@@ -16,6 +16,50 @@ _DIALOGUE = '''Official paraphrase: For dialogue or singing use <d>[Language] ..
 _BOUNDARY = 'Guidance cannot enable an operation: discover current capabilities first. Examples are authored illustrations, not validated generations. Reviewed 2026-10-12.'
 
 _GUIDES = {
+    ('moss-image-sft-8step', 'generation'): {
+        'text': '''Easel MOSS-Image SFT eight-step generation uses the lodestones
+MOSS-Image-SFT-8-steps-dmd lora.safetensors adapter on the matching SFT transformer.
+Describe the subject, composition, environment, lighting and style in natural
+language. The author also supports compact JSON scene-graph captions.
+Defaults: 8 Euler / sgm_uniform steps, shift 5, CFG 1 (no classifier-free guidance),
+LoRA strength 1, no skip-layer guidance, BF16 diffusion weights, CPU text encoding,
+1024x1024 and batch 1. The LoRA, guidance and precision settings are fixed by
+this curated model; steps, size and seed remain ordinary image request controls.
+The adapter is an upstream work-in-progress distillation, not a promise of
+50-step quality for every prompt. Model loading and CPU text encoding can
+dominate a cold request even with eight sampler evaluations.
+Use model moss-image-sft-8step on /v1/images/generations with Prefer: respond-async;
+save the receipt, poll it and download its completed PNG. Reference editing,
+variations, layout-node controls and transparency guarantees are not exposed.
+The matching SFT transformer and adapter must be installed; MOSS Base alone is
+insufficient. The text encoder, tokenizer and VAE are shared with the Base assets.
+''',
+        'sources': [
+            'https://huggingface.co/lodestones/MOSS-Image-SFT-8-steps-dmd/blob/f95df83b5e90ae91ea412434b3f9b7f1c8c6314f/README.md',
+            'https://huggingface.co/spaces/hugging-apps/moss-image-8-step-dmd/blob/2ff429beafaee462b97f6c34238959b19d270f05/app.py',
+            'https://huggingface.co/OpenMOSS-Team/MOSS-Image-SFT/tree/f972bd4b4b9e3852133cc5da954d87bc32cd8fb9',
+        ],
+    },
+    ('moss-image-base', 'generation'): {
+        'text': '''Easel MOSS-Image Base text-to-image: describe the subject, composition,
+environment, lighting and visual style. Include exact visible text in quotes.
+This backend uses the installed HF-directory plugin, FP8 diffusion weights at
+load time and CPU text encoding. Default sampling is 50 steps, CFG 3, shift 5,
+Euler / sgm_uniform and Simple SLG layer 22 at 1024x1024. Start with n=1;
+CPU text encoding alone needs about 16 GiB of host RAM. A seeded 512x512,
+20-step smoke test verified basic inference on the image GPU on 2026-10-31.
+Use model moss-image-base on /v1/images/generations. The common image size,
+steps, seed, n and prompt-separator controls apply. Prefer respond-async, save
+the receipt and poll before downloading the PNG.
+Reference editing, variations, native layout prompts and the edit LoRA are not
+exposed by this backend. This is Base, not SFT. Pixel-art prompts do not guarantee
+a specific pixel grid, aligned animation frames or transparent output.
+''',
+        'sources': [
+            'https://github.com/OpenMOSS/MOSS-Image/blob/c1355e6b1986dfe8fba3c0455783a05899212342/comfyui/moss-image/example_workflows/moss-image-api.json',
+            'https://huggingface.co/OpenMOSS-Team/MOSS-Image-Base/tree/1ceede80badddd6a7812069619edaa5633587192',
+        ],
+    },
     ('qwen-image-2.1', 'generation'): {
         'text': '''Easel recommendation for native Qwen-Image-2.1 generation (no input image): Describe the subject, arrangement, environment, lighting and visual style. Specify visible text exactly. For transparency explicitly request RGBA, an alpha channel and a transparent background.
 Official basis: The model card demonstrates descriptive generation, quoted text and transparency; it does not prescribe a universal named-field layout.
