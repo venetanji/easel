@@ -4,6 +4,56 @@ Easel keeps HTTP/authentication, queue admission, receipts and request validatio
 separate from its Python ComfyUI graph builders. JavaScript/CLI consumers use the
 same HTTP contract. They do not need a port of the graph builder.
 
+## Native YuE2 API (24 October 2026)
+
+`easel/yue2_graph.py` vendors only the full-ABC branch of the creative agent's
+`comfy-graph/src/creative_comfy_graph/yue2.py` from the isolated
+`creative-skills-yue2-20261022` working tree. This module was not in baseline
+commit `c3788aa6e1f954bc13fd4646531991b1096c5786` or a published package.
+The source SHA-256 is
+`5c5cfd83a4a6c9fe7c30d51b89c90f2d3c0474f03c2d0550269bb2524ef326fe`.
+Vendoring matches Easel's existing graph-helper pattern and makes its frozen
+Docker build independent of an unpublished external checkout.
+
+`tests/fixtures/yue2/full_abc_graph.json` was generated from that original
+builder with the test brief, seed 0, 120-second ceiling and
+`filename_prefix='easel/audio/yue2'`. Its SHA-256 is
+`bec0de66bf52792cb0347790796b5955c8fba5e7dc73415da77400fd697f1049`.
+The test compares every setting and link after adjusting the original zero-based
+node IDs to Easel's one-based IDs. No alternate planning modes are exposed.
+`SaveAudioAdvanced.format` stays the native **string** wire selector `flac`,
+not the execution-time DynamicCombo object. The generated-seconds output sizes
+the latent; the request's duration ceiling does not.
+
+`tests/fixtures/yue2/native_schema.json` is copied unchanged from the creative
+agent's 22 October capture, SHA-256
+`e66b7a31762ce516aee40f09a01d44b20d0973de7200856f48f0ec6525739e82`.
+It describes ComfyUI `b5cc883` native interfaces; tests inject the installed
+checkpoint choice in memory. Schema descriptions retain upstream ComfyUI terms.
+`tone.flac` is a synthetic 48 kHz stereo, 40 ms sine tone produced with ffmpeg,
+not YuE2 output. No checkpoint is bundled or downloaded.
+
+The creative agent's separate live CLI evidence includes full-ABC runs up to a
+300-second ceiling. That motivates the API ceiling, not a guarantee of exact
+duration, natural completion, lyric adherence, or HTTP runtime success.
+API tests exercise submission/recovery/cached-output behavior against a fake
+ComfyUI service; native readiness was also checked without submitting GPU work.
+An additional retrieval-only HTTP/ASGI smoke used the existing successful
+30-second CLI pilot (`c0945835-cb2f-4cf1-a081-427da12f3079`) and a temporary
+receipt database: real ComfyUI history/fetch, Easel bearer auth, cached FLAC,
+byte ranges, ETag 304 and a full ffmpeg decode passed (30 s, 48 kHz stereo,
+2,450,966 bytes). This did not submit a prompt, modify production configuration,
+verify a new HTTP generation, or test the public reverse-proxy path.
+The intended checkpoint's historical upstream revision is
+`Comfy-Org/YuE2@2f76ca75e6ee094169de899cc7fc99d6887e2196`, SHA-256
+`96fe199377309001ed8cd26a944baeee8cc31a20ba7c36d1d3c0a7e1f4149db6`.
+The API checks its installed filename, not a runtime weight hash; it must not
+claim byte-identical installed weights or a verified native model revision.
+
+MIT notices for Creative Skills and official templates are retained in `NOTICE`
+and `licenses/`; the model weights' CC-BY-NC-4.0 terms and upstream
+individual-creator/academic addendum are separate from gateway/recipe code.
+
 ## MOSS-Image Base HF plugin (31 October 2026)
 
 `easel/moss_graph.py` adapts the official plugin API workflow at

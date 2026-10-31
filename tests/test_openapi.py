@@ -149,17 +149,18 @@ def test_image_swagger_bodies_and_async_header_follow_existing_contract(client):
 
 def test_audio_examples_match_real_request_models_without_replacing_schema(client):
     from pydantic import TypeAdapter
-    from easel.audio_api import MusicGeneration, SpeechGeneration, SoundGeneration
+    from easel.audio_api import MusicGeneration, SpeechGeneration, SoundGeneration, Yue2Generation
 
     schema = client.get("/openapi.json").json()
     operation = schema["paths"]["/v1/audio/generations"]["post"]
     media = operation["requestBody"]["content"]["application/json"]
-    assert len(request_schema(schema, "/v1/audio/generations", "application/json")["anyOf"]) == 3
-    adapter = TypeAdapter(MusicGeneration | SpeechGeneration | SoundGeneration)
-    assert set(media["examples"]) == {"music", "speech", "sound"}
+    assert len(request_schema(schema, "/v1/audio/generations", "application/json")["anyOf"]) == 4
+    adapter = TypeAdapter(MusicGeneration | SpeechGeneration | SoundGeneration | Yue2Generation)
+    assert set(media["examples"]) == {"music", "speech", "sound", "yue2"}
     for example in media["examples"].values():
         validated = adapter.validate_python(example["value"])
-        assert validated.dry_run is True
+        if not isinstance(validated, Yue2Generation):
+            assert validated.dry_run is True
 
 
 def test_docs_preserve_network_auth_policy_and_native_audio_discovery(client):
@@ -182,6 +183,7 @@ def test_all_component_schemas_have_clear_consistent_names(client):
         "VideoGenerationRequest", "AudioGenerationRequest",
         "AudioMusicGenerationRequest", "AudioSpeechGenerationRequest",
         "AudioSoundGenerationRequest", "AudioGenerationAbandonRequest",
+        "AudioYue2GenerationRequest",
         "ValidationErrorResponse", "ValidationErrorDetail",
     }
     assert list(components) == sorted(components)
@@ -223,6 +225,7 @@ def test_schema_renaming_preserves_all_references_and_audio_variants(client):
         {"$ref": "#/components/schemas/AudioMusicGenerationRequest"},
         {"$ref": "#/components/schemas/AudioSpeechGenerationRequest"},
         {"$ref": "#/components/schemas/AudioSoundGenerationRequest"},
+        {"$ref": "#/components/schemas/AudioYue2GenerationRequest"},
     ]
 
 
@@ -239,6 +242,7 @@ def test_named_openapi_schema_caches_and_regenerates_cleanly(client):
     ("MusicGeneration", "AudioMusicGenerationRequest"),
     ("SpeechGeneration", "AudioSpeechGenerationRequest"),
     ("SoundGeneration", "AudioSoundGenerationRequest"),
+    ("Yue2Generation", "AudioYue2GenerationRequest"),
     ("AbandonGeneration", "AudioGenerationAbandonRequest"),
 ])
 def test_named_audio_schemas_preserve_generated_request_definitions(client, model_name, schema_name):

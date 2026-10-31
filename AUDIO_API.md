@@ -1,9 +1,92 @@
 # Audio API
 
+Easel supports native YuE2 text-to-music through a configured ComfyUI service,
+independently of its optional Suno MCP/REST audio backend. The JSON generation
+route is shared; their lifecycle and output routes are intentionally separate.
+All routes use Easel's existing authentication policy.
+
+## Native YuE2
+
+Set `COMFY_URL_AUDIO` to the service containing the native YuE2 nodes and the
+`yue2_3b_int8_convrot.safetensors` checkpoint. This setting is explicit: no
+image/video backend is silently selected. To share an existing service, use its
+same configured URL (trailing slashes are ignored), which also shares its
+admission lock and eight-job queue limit. No weights are downloaded or services
+restarted by the API. Blank `COMFY_URL_AUDIO` disables the `yue2` routing ID.
+
+`GET /v1/models` advertises `yue2` independently of `SUNO_URL`.
+`GET /v1/audio/capabilities?model=yue2` checks nodes, ports, native selectors
+and checkpoint availability without inference. It publishes text/seed/duration
+limits, supported planning, FLAC format, and the curated guide URL.
+`GET /v1/audio/models` remains the **Suno-native** model catalog.
+
+```sh
+curl "$EASEL_URL/v1/audio/generations" \
+  -H "Authorization: Bearer $EASEL_API_KEY" \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"yue2","style":"English, warm folk vocal, acoustic guitar, 88 BPM","lyrics":"[Verse]\nMorning on the water\nLight across the bay","max_duration_seconds":30,"seed":0}'
+```
+
+This consumes GPU time and returns HTTP 202 with `object: "audio_job"`, an
+`id`, `status_url`, `Location` and `Retry-After: 2`. Save the receipt and poll
+`GET /v1/audio/jobs/{job_id}`. States are `submitting`, `queued`, `in_progress`,
+`completed`, `failed`, `cancelled`, or `submission_unknown`.
+Native full melody-and-chord ABC planning is fixed in this first API version.
+Style (1..1000 characters) and lyrics (1..12000 characters) must be nonblank
+and NUL-free. These are transport limits, not guarantees of model-context fit
+or lyric fidelity. `max_duration_seconds` is finite, 0.04..300, default 120;
+it is a **ceiling**, not a promise of that length. Long prompts can reduce
+the remaining shared context. `seed` defaults to 0 and accepts exact JSON-safe
+integers 0..9007199254740991; larger native uint64 values are deliberately not
+exposed as lossy JavaScript numbers. Unknown fields, `dry_run`, Suno controls,
+instrumental-only, batch, cover/reference audio, custom ABC, sampler/model-file
+overrides and alternate planning modes are rejected.
+
+Completed jobs include `output` with `audio_url`, `download_url`, `format`,
+`mime_type`, byte size, SHA-256, sample rate, channels and duration from the
+saved FLAC's STREAMINFO sample count. This is not a full audio decode, musical
+quality evaluation, or verification of the requested lyrics. `finish_reason`
+is always null: this graph does not expose a reliable natural-EOS/context-budget
+flag. Output latent length comes from native generated seconds, not the
+requested ceiling. GET `/v1/audio/jobs/{job_id}/content` for `audio/flac`, or
+add `?download=true` for an attachment. Single byte ranges, ETag `If-Range`
+and `If-None-Match` are supported. No Suno save/download POST is needed.
+
+Audio-specific receipts and cached FLAC use `audio.sqlite3` under the existing
+`EASEL_JOB_DIR`/Docker job volume. They expire after 24 hours; expired IDs return
+410. At most eight nonterminal audio receipts are admitted, in addition to the
+shared physical backend's eight queued/running-job limit. A FLAC fetch is bounded
+to 128 MiB, and the unexpired audio cache is bounded to 512 MiB; output exceeding
+these limits fails explicitly. Cached results survive backend history removal
+and API restarts. Active jobs are observed, never resubmitted. A lost backend
+job is reported after a 60-second absence grace period. Changing the configured
+backend does not reroute an accepted job to a different service.
+
+A disconnected caller waiting for admission is removed; after reservation,
+submission continues under the shared queue lock so its acknowledgement can
+be persisted. If acceptance is ambiguous, the durable receipt stays
+`submission_unknown` and occupies a pending slot until expiry. Check ComfyUI
+before considering a new POST. If the caller loses the receipt entirely, there
+is no idempotency key or listing/recovery-by-client-token endpoint: inspect
+ComfyUI directly rather than blindly resubmitting. Suno's shared status,
+tracks and `abandon` do not apply. There is no active cancellation endpoint;
+the API never interrupts unrelated backend work.
+
+The bounded full-ABC recipe is vendored from the creative agent's graph work,
+with an exact offline recipe comparison modulo node numbering. This avoids a
+Docker dependency on an unpublished working tree; see `GRAPH_PROVENANCE.md`
+and `NOTICE`. API support does not automatically enable the separate Studio,
+MCP or CLI consumers. Model weights retain separate CC-BY-NC-4.0 terms and the
+upstream individual-creator/academic addendum; this code does not grant company
+commercial-hosting rights. Review the model's pinned `MODEL_LICENSE` linked
+from the guide before deciding on public/product hosting.
+
+## Suno Configuration
+
 Easel optionally routes audio generation to a separately operated Suno MCP/REST
 server. Set `SUNO_URL` to that server's root URL (without `/api/v1`), optionally
 set `SUNO_REST_API_TOKEN`, and use `SUNO_TIMEOUT` for browser-operation timeouts
-(180 seconds by default). Blank `SUNO_URL` disables audio model discovery.
+(180 seconds by default). Blank `SUNO_URL` disables Suno model discovery only.
 Every audio endpoint uses Easel's normal `EASEL_API_KEY` bearer authentication;
 the upstream token is separate and never returned to callers.
 
@@ -15,7 +98,7 @@ is mounted into Easel. Suno retains ownership of its browser and saved files.
 
 ## Generation
 
-`GET /v1/models` adds these routing IDs when audio is configured:
+`GET /v1/models` adds these routing IDs when Suno is configured:
 
 | Model | Prompt means | Extra options |
 | --- | --- | --- |

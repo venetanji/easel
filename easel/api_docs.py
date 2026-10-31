@@ -6,18 +6,19 @@ from .qwen_graph import MAX_REFERENCES
 
 
 API_DESCRIPTION = """
-Generate images and videos through ComfyUI, and music, speech, or sounds through
-an optional Suno service.
+Generate images, videos, and YuE2 music through ComfyUI, and music, speech, or
+sounds through an optional Suno service.
 
 ### Start here
 1. If `EASEL_API_KEY` is configured, click **Authorize** and paste its **raw value**.
    Do not include `Bearer `: Swagger adds the `Authorization: Bearer <token>`
    header. The Suno upstream token is a different credential.
 2. Call **Models → List configured models** before choosing a model. Video models
-   appear when `COMFY_URL_VIDEO` is set; audio models appear when `SUNO_URL` is set.
+   appear when `COMFY_URL_VIDEO` is set; Suno models appear when `SUNO_URL` is set,
+   and YuE2 appears when `COMFY_URL_AUDIO` is set.
    A listed model does not prove that its upstream assets or service are ready.
 3. Expand a route, click **Try it out**, and use its request example. Generation
-   can consume GPU time or Suno credits. Audio's `dry_run: true` prepares the
+   can consume GPU time or Suno credits. Suno's `dry_run: true` prepares the
    shared browser form without clicking Create.
 
 `/health` is public. Untrusted clients need the same bearer token on API routes
@@ -37,8 +38,9 @@ configured credentials.
 - **Videos:** multipart submission, then status/queue polling and MP4 retrieval.
   LTX uses `seconds`; MiniMax H3 uses `frames` and rejects `seconds`. Check
   model-specific capabilities before selecting sizes or optional controls.
-- **Audio:** one JSON generation route with three model-specific request shapes.
-  Status observes the latest attempt in Suno's shared browser, not a private job
+- **YuE2 audio:** JSON style and lyrics return a durable audio job. Poll its
+  status_url, then retrieve the completed FLAC output. No Suno account is needed.
+- **Suno audio:** status observes the latest attempt in Suno's shared browser, not a private job
   queue. Save returned track IDs, wait for completion, request a saved download,
   then stream its content through Easel.
 
@@ -52,7 +54,7 @@ TAGS = [
     {"name": "Models", "description": "Discover model IDs enabled by this deployment's configuration."},
     {"name": "Images", "description": "Generate, edit, or vary images; poll durable async jobs and fetch output."},
     {"name": "Videos", "description": "Discover LTX/H3 controls, submit multipart jobs, poll, and download MP4 output."},
-    {"name": "Audio", "description": "Generate with Suno's shared browser, recover the latest attempt, and save or stream tracks."},
+    {"name": "Audio", "description": "Generate native YuE2 audio jobs or use Suno's shared browser, and retrieve audio."},
 ]
 
 _ASYNC_IMAGES = """
@@ -115,7 +117,7 @@ ROUTE_DOCS = {
     ("GET", "/v1/models/{model_id}/guide"): {
         "tags": ["Models"], "summary": "Read a reviewed model prompt guide",
         "description": "Read-only curated guidance; never submits generation or checks upstream readiness. "
-                       "Explicit modes: qwen-image-2.1 generation/editing; moss-image-base and moss-image-sft-8step generation; minimax-h3 base/reference. "
+                       "Explicit modes: qwen-image-2.1 generation/editing; moss-image-base and moss-image-sft-8step generation; minimax-h3 base/reference; yue2 music. "
                        "Unknown or unreviewed pairs return 404. The version-1 JSON envelope contains "
                        "version, guide_id, model, mode, text and official source URLs in sources, "
                        "bounded to 16 KiB. Discover capabilities separately before selecting operations. "
@@ -234,7 +236,13 @@ ambiguous POST failure must not be automatically retried.""",
     },
     ("POST", "/v1/audio/generations"): {
         "tags": ["Audio"], "summary": "Generate music, speech, or a sound",
-        "description": """Send JSON matching one of three model-specific shapes:
+        "description": """Send JSON matching one of four model-specific shapes:
+- `yue2`: style, lyrics, optional max_duration_seconds (0.04..300, default 120)
+  and JSON-safe integer seed (0..2^53-1, default 0). Uses native ComfyUI full-ABC
+  planning and returns a durable audio_job with HTTP 202. Poll status_url, then
+  GET output.audio_url for FLAC. The duration is a ceiling, not a promised length.
+  Check `/v1/audio/capabilities?model=yue2` for readiness and model terms.
+  No dry_run, instrumental, reference-audio, or Suno controls are accepted.
 - `suno-music`: prompt is a musical style/description; optionally supply lyrics,
   title, or music controls. Music accepts a prompt, lyrics, or both. Instrumental
   requests require empty lyrics. Optional `suno_model` is an exact native ID from
@@ -243,7 +251,7 @@ ambiguous POST failure must not be automatically retried.""",
 - `suno-speech`: prompt is the script to speak; optional tone/background music.
 - `suno-sound`: prompt describes a sound; optional one_shot/loop and bpm.
 
-All accept `dry_run: true` to prepare the shared browser form without clicking
+All Suno shapes accept `dry_run: true` to prepare the shared browser form without clicking
 Create or spending generation credits. The examples below use this safer first
 step; set false only when ready to generate. Unknown fields are rejected.
 
@@ -253,16 +261,32 @@ any challenge manually through the returned novnc_url, then continue polling.
 Status is the latest shared-browser attempt, not a per-user job receipt. Save
 song IDs, inspect each track until complete, POST its /download to save audio,
 then GET its /content. After a timeout/disconnect, check status and the Suno
-library before retrying: generation may already have consumed credits.""",
+library before retrying: generation may already have consumed credits.
+YuE2 does not use Suno status/tracks/abandon; its audio job survives API restarts
+and cached output expires after 24 hours. An ambiguous submission is never retried.""",
         "openapi_extra": {"requestBody": {"content": {"application/json": {"examples": {
             "music": {"summary": "Prepare instrumental music", "value": {"model": "suno-music", "prompt": "Gentle ambient piano with warm strings", "make_instrumental": True, "dry_run": True}},
             "speech": {"summary": "Prepare a spoken script", "value": {"model": "suno-speech", "prompt": "Welcome to the exhibition.", "tone": "Warm and calm", "dry_run": True}},
             "sound": {"summary": "Prepare a sound effect", "value": {"model": "suno-sound", "prompt": "A wooden door creaks open", "sound_type": "one_shot", "dry_run": True}},
+            "yue2": {"summary": "Generate native YuE2 music (uses GPU)", "value": {"model": "yue2", "style": "English, warm folk vocal, acoustic guitar, 88 BPM", "lyrics": "[Verse]\nMorning on the water\nLight across the bay", "max_duration_seconds": 30, "seed": 0}},
         }}}}},
     },
     ("GET", "/v1/audio/generations/status"): {
         "tags": ["Audio"], "summary": "Inspect the latest shared audio attempt",
         "description": "Observes the latest attempt in Suno's shared browser, including work started by MCP or direct REST clients. It is not per-user status or a persistent Easel job queue; a later attempt replaces it and Suno restarts lose attempt state. Save track IDs for individual polling. Status can report pending, submitted, captcha_required, complete, error, abandoned, or idle. Poll this after an ambiguous submission before deciding to retry; do not submit another generation to check progress.",
+    },
+    ("GET", "/v1/audio/capabilities"): {
+        "tags": ["Audio"], "summary": "Discover native YuE2 controls and readiness",
+        "description": "Reports configured backend, installed nodes/checkpoint, full-ABC planning, duration ceiling, JSON-safe seed range, FLAC output and model terms. Does not generate audio or download assets. Character limits are API transport limits, not guarantees that text fits the shared model context.",
+    },
+    ("GET", "/v1/audio/jobs/{job_id}"): {
+        "tags": ["Audio"], "summary": "Inspect a durable native audio job",
+        "description": "Poll the accepted YuE2 job until completed, failed, or cancelled. submission_unknown means acceptance was ambiguous: inspect ComfyUI before submitting again. No job is automatically resubmitted. Completed output includes FLAC metadata and authenticated URLs; finish_reason stays null because native history does not expose a reliable finish flag. Jobs expire after 24 hours.",
+    },
+    ("GET", "/v1/audio/jobs/{job_id}/content"): {
+        "tags": ["Audio"], "summary": "Stream or download a completed native FLAC",
+        "description": "Authenticated cached audio/flac, independent of ComfyUI history after caching. Set download=true for attachment disposition. Supports single byte ranges, If-Range ETags and If-None-Match. Returns 409 before output is ready, 410 after expiry. No Suno download POST is needed.",
+        "responses": {200: {"content": {"audio/flac": {"schema": {"type": "string", "format": "binary"}}}}, 206: {"description": "Partial FLAC content"}, 304: {"description": "Not modified"}, 416: {"description": "Invalid byte range"}},
     },
     ("POST", "/v1/audio/generations/abandon"): {
         "tags": ["Audio"], "summary": "Close an unconfirmed audio attempt",
@@ -300,6 +324,7 @@ _COMPONENT_SCHEMA_NAMES = {
     "MusicGeneration": "AudioMusicGenerationRequest",
     "SpeechGeneration": "AudioSpeechGenerationRequest",
     "SoundGeneration": "AudioSoundGenerationRequest",
+    "Yue2Generation": "AudioYue2GenerationRequest",
     "HTTPValidationError": "ValidationErrorResponse",
     "ValidationError": "ValidationErrorDetail",
 }

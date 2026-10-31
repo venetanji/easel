@@ -115,6 +115,8 @@ class ComfyClient:
                     outputs = entry.get("outputs") or {}
                     if output_kind == "videos":
                         return self._collect_videos(outputs)
+                    if output_kind == "audio":
+                        return self._collect_media(outputs, "audio")
                     return self._collect_images(outputs)
             if time.monotonic() >= deadline:
                 raise ComfyTimeout(prompt_id)
@@ -130,12 +132,22 @@ class ComfyClient:
         resp.raise_for_status()
         return resp.json()
 
-    async def fetch(self, ref: ImageRef) -> bytes:
-        resp = await self._http.get(f"{self._base}/view", params={
+    async def fetch(self, ref: ImageRef, *, max_bytes: int | None = None) -> bytes:
+        params = {
             "filename": ref["filename"],
             "subfolder": ref.get("subfolder", ""),
             "type": ref.get("type", "output"),
-        })
+        }
+        if max_bytes is not None:
+            async with self._http.stream("GET", f"{self._base}/view", params=params) as resp:
+                resp.raise_for_status()
+                content = bytearray()
+                async for chunk in resp.aiter_bytes():
+                    if len(content) + len(chunk) > max_bytes:
+                        raise ComfyError("backend output exceeds the cache size limit")
+                    content.extend(chunk)
+                return bytes(content)
+        resp = await self._http.get(f"{self._base}/view", params=params)
         resp.raise_for_status()
         return resp.content
 

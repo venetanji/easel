@@ -1,9 +1,10 @@
 # Easel
 
 An OpenAI-compatible image and video API gateway for a separately operated
-[ComfyUI](https://github.com/Comfy-Org/ComfyUI) service, with audio generation
-through a separately operated Suno MCP/REST service. Python graph builders,
-authenticated admission, managed uploads and durable image job receipts live here.
+[ComfyUI](https://github.com/Comfy-Org/ComfyUI) service, with native YuE2 music
+and optional audio generation through a separate Suno MCP/REST service. Python
+graph builders, authenticated admission, managed uploads and durable image/audio
+job receipts live here.
 
 ## Develop and run
 
@@ -79,8 +80,9 @@ token; see **Authentication and local HTTP** for that policy and public-proxy
 exceptions. Documentation does not contain configured keys.
 
 Start with `GET /v1/models`. Image model IDs are registered by the application;
-video IDs appear when `COMFY_URL_VIDEO` is set, and the three audio IDs appear
-when `SUNO_URL` is set. These are configuration-based listings, not guarantees
+video IDs appear when `COMFY_URL_VIDEO` is set, the three Suno audio IDs appear
+when `SUNO_URL` is set, and `yue2` appears when `COMFY_URL_AUDIO` is set.
+These are configuration-based listings, not guarantees
 of backend readiness or installed assets. Generation can consume GPU time or
 Suno credits.
 
@@ -144,7 +146,23 @@ Save the returned video ID, poll `GET /v1/videos/{video_id}`, and retrieve
 estimates, which may be unavailable or change. All requests need the same bearer
 key; video output relies on ComfyUI history rather than the durable image cache.
 
-### Audio: latest attempt, individual tracks, saved content
+### Native YuE2: durable audio jobs
+
+Set `COMFY_URL_AUDIO` to the ComfyUI service with the native YuE2 nodes and
+`yue2_3b_int8_convrot.safetensors` already installed. Use the same URL as the
+image/video setting when sharing that service so queue admission is shared.
+No Suno account is needed and no model is downloaded automatically.
+
+`GET /v1/audio/capabilities?model=yue2` checks readiness. Then POST
+`/v1/audio/generations` with `model: "yue2"`, `style`, `lyrics`, optional
+`max_duration_seconds` (default 120, maximum 300) and `seed` (default 0).
+Full-ABC planning returns HTTP 202 and a durable `status_url`. Poll that URL,
+then GET the completed `output.audio_url` for authenticated FLAC. The requested
+duration is a ceiling; actual duration is returned separately. Receipts and
+cached output survive API restarts for 24 hours under `EASEL_JOB_DIR`.
+See [Audio API](AUDIO_API.md) for limits, recovery, and separate model terms.
+
+### Suno: latest attempt, individual tracks, saved content
 
 `POST /v1/audio/generations` accepts model-specific JSON for `suno-music`
 (musical description/lyrics), `suno-speech` (spoken script), or `suno-sound`

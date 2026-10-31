@@ -11,6 +11,7 @@ from tests.test_app import build
     ('moss-image-sft-8step', 'generation', 'LoRA strength 1'),
     ('minimax-h3', 'base', 'integrated_multimodal_description:'),
     ('minimax-h3', 'reference', 'subject_definitions:'),
+    ('yue2', 'music', 'full melody-and-chord ABC planning'),
 ])
 def test_reviewed_guide(model, mode, fragment):
     client, fake = build()

@@ -130,6 +130,7 @@ class Settings:
     trusted_proxy_networks: tuple[Network, ...] = ()
     require_auth_networks: tuple[Network, ...] = ()
     public_url: str | None = None
+    comfy_audio_url: str | None = None
 
     def __post_init__(self):
         VideoLimits(self.video_max_pixels, self.video_max_pixel_frames)
@@ -147,6 +148,7 @@ class Settings:
             comfy_url=_clean(env.get("COMFY_URL_IMAGE")) or _clean(env.get("COMFY_URL_FLUX"))
                 or "http://comfy-docker-tailscale-serve-1:8188",
             comfy_video_url=_clean(env.get("COMFY_URL_VIDEO")),
+            comfy_audio_url=_clean(env.get("COMFY_URL_AUDIO")),
             api_key=_clean(env.get("EASEL_API_KEY")),
             job_timeout=float(env.get("COMFY_JOB_TIMEOUT", "600")),
             max_inflight=int(env.get("COMFY_MAX_INFLIGHT", "1")),

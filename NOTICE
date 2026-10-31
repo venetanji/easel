@@ -35,6 +35,15 @@ earlier MIT grants, or declare that all files share one copyright owner.
    WorkflowGraph helper, node numbering/link adaptation, and server-specific
    inputs/validation. Existing MIT permissions on the upstream portions remain.
 
+   easel/yue2_graph.py adapts the full-ABC branch of the creative agent's
+   22 October 2026 Creative Comfy Graph yue2.py working source (not present in
+   its baseline commit c3788aa6e1f954bc13fd4646531991b1096c5786). The source
+   SHA-256 is 5c5cfd83a4a6c9fe7c30d51b89c90f2d3c0474f03c2d0550269bb2524ef326fe.
+   The same retained creative-skills MIT grant applies to upstream portions.
+   Easel uses its existing WorkflowGraph helper and bounds its public API;
+   recipe settings and links are compared with an independent saved graph.
+   Official Comfy workflow template portions retain the MIT notice in section 2.
+
 2. Official Comfy workflow templates
 
    The maintainer confirmed on 5 October 2026 that Comfy Graph recipes derive
@@ -72,6 +81,14 @@ earlier MIT grants, or declare that all files share one copyright owner.
    e9027f2b30f37bb3052714eb08fcf479542f4fc0. See GRAPH_PROVENANCE.md and
    H3_BASELINE.md in the source repository for exact source links, independent
    fixture provenance, adaptations and runtime-verification boundaries.
+
+   tests/fixtures/yue2/native_schema.json preserves the creative agent's
+   native YuE2 node-schema capture from ComfyUI b5cc883 (22 October 2026).
+   Retain ComfyUI's upstream terms for copyrightable schema descriptions.
+   Tests inject checkpoint availability in memory, not into the saved capture.
+   tests/fixtures/yue2/full_abc_graph.json derives from the MIT Creative Comfy
+   Graph recipe; tests/fixtures/yue2/tone.flac is a synthetic 40 ms sine tone,
+   not generated model output or bundled weights.
 
 4. Independent dependencies, services and model assets
 

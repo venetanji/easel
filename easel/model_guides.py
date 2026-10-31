@@ -60,6 +60,28 @@ a specific pixel grid, aligned animation frames or transparent output.
             'https://huggingface.co/OpenMOSS-Team/MOSS-Image-Base/tree/1ceede80badddd6a7812069619edaa5633587192',
         ],
     },
+    ('yue2', 'music'): {
+        'text': '''Easel YuE2 text-to-music: supply a separate style description and original lyrics.
+Style can describe language, vocal character, genre, instrumentation, mood and tempo.
+Use lyric section headings such as [Verse] and [Chorus]. The API runs automatic
+full melody-and-chord ABC planning, then music generation and acoustic diffusion.
+max_duration_seconds is a ceiling (default 120, API maximum 300), not an exact
+requested length. Native generation can stop early or exhaust shared prompt context;
+character caps do not guarantee context fit, musical quality or lyric fidelity.
+The response returns a durable audio job; poll status_url and download its completed
+FLAC. Output duration is measured from FLAC STREAMINFO; finish_reason is unknown.
+Seed defaults to 0; only exact JSON-safe integers 0..9007199254740991 are accepted.
+No cover, reference audio, instrumental-only, edited ABC or alternative planning modes
+are exposed. Suno status, abandon and tracks do not apply to these jobs.
+Model weights have separate CC-BY-NC-4.0 terms and an upstream individual-creator
+addendum; company commercial hosting requires separate permission. Review the
+model license and input/output rights before use. API guide reviewed 2026-10-24.
+''',
+        'sources': [
+            'https://huggingface.co/Comfy-Org/YuE2',
+            'https://github.com/multimodal-art-projection/YuE/blob/1647252d68b70cbead046ffd3f7caf036dde47ee/MODEL_LICENSE',
+        ],
+    },
     ('qwen-image-2.1', 'generation'): {
         'text': '''Easel recommendation for native Qwen-Image-2.1 generation (no input image): Describe the subject, arrangement, environment, lighting and visual style. Specify visible text exactly. For transparency explicitly request RGBA, an alpha channel and a transparent background.
 Official basis: The model card demonstrates descriptive generation, quoted text and transparency; it does not prescribe a universal named-field layout.

@@ -69,6 +69,7 @@ def test_settings_defaults():
     s = Settings.from_env({})
     assert s.comfy_url.startswith("http")
     assert s.comfy_video_url is None
+    assert s.comfy_audio_url is None
     assert s.api_key is None
     assert s.job_timeout == 600
     assert s.max_inflight == 1
@@ -85,6 +86,11 @@ def test_settings_defaults():
     assert s.trusted_proxy_networks == ()
     assert s.require_auth_networks == ()
     assert s.public_url is None
+
+
+def test_audio_backend_setting_is_explicit_and_trimmed():
+    assert Settings.from_env({"COMFY_URL_AUDIO": " http://audio/ "}).comfy_audio_url == "http://audio/"
+    assert Settings.from_env({"COMFY_URL_AUDIO": " "}).comfy_audio_url is None
 
 
 def test_suno_settings_are_optional_and_strip_blank_values():

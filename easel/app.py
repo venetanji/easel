@@ -1,4 +1,4 @@
-"""FastAPI app: image/video endpoints backed by ComfyUI and audio backed by Suno."""
+"""FastAPI image, video, and audio endpoints backed by ComfyUI and Suno."""
 from __future__ import annotations
 
 import asyncio
@@ -31,6 +31,7 @@ from .config import MODELS, ModelSpec, Settings, UnknownModelError, parse_size, 
 from .errors import APIError, error_response
 from .image_jobs import ImageJobs, wants_async
 from .audio_api import AUDIO_MODELS, register_audio_routes
+from .audio_jobs import AudioJobs
 from .api_docs import API_DESCRIPTION, ROUTE_DOCS, TAGS, configure_openapi
 from .suno_client import SunoClient
 from .qwen_graph import MAX_REFERENCES, reference_edit as qwen_reference_edit
@@ -39,7 +40,7 @@ from .moss_graph import text_to_image as moss_text_to_image
 from .video_graph import VIDEO_MODEL_ID, parse_video_size, text_to_video
 from .video_jobs import VIDEO_TTL_SECONDS, make_video_id, parse_video_id, video_timing
 from .video_sizing import VideoLimits, VideoSizingError
-from . import h3_controls, h3_graph
+from . import h3_controls, h3_graph, yue2_graph
 from .video_controls import (guiding_nodes_available, parse_guiding_frames,
                              validate_video_form, validate_video_uploads, video_capabilities)
 from .video_loras import VIDEO_LORAS, VideoLoRAError, installed_lora_names, parse_video_loras
@@ -400,18 +401,28 @@ def build_edit_graph(spec: ModelSpec, *, image_filenames, prompt, width, height,
 
 # ---- app factory ----
 
-def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, suno=None) -> FastAPI:
+def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, suno=None,
+               comfy_audio=None) -> FastAPI:
     settings = settings or Settings.from_env()
     video_limits = VideoLimits(settings.video_max_pixels, settings.video_max_pixel_frames)
     shared_backend = bool(settings.comfy_video_url) and (
         settings.comfy_url.rstrip("/") == settings.comfy_video_url.rstrip("/")
         or comfy is not None and comfy is comfy_video
     )
+    audio_shares_image = bool(settings.comfy_audio_url) and (
+        settings.comfy_audio_url.rstrip("/") == settings.comfy_url.rstrip("/")
+        or comfy_audio is not None and comfy_audio is comfy
+    )
+    audio_shares_video = bool(settings.comfy_audio_url and settings.comfy_video_url) and (
+        settings.comfy_audio_url.rstrip("/") == settings.comfy_video_url.rstrip("/")
+        or comfy_audio is not None and comfy_audio is comfy_video
+    )
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         http = None
         if (comfy is None or (settings.comfy_video_url and comfy_video is None)
+                or (settings.comfy_audio_url and comfy_audio is None)
                 or (settings.suno_url and suno is None)):
             http = httpx.AsyncClient(timeout=httpx.Timeout(30.0, read=180.0))
             if comfy is None:
@@ -422,14 +433,23 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             if settings.suno_url and suno is None:
                 app.state.suno = SunoClient(settings.suno_url, http, token=settings.suno_api_token,
                                            timeout=settings.suno_timeout)
+            if settings.comfy_audio_url and comfy_audio is None:
+                app.state.comfy_audio = app.state.comfy if audio_shares_image else \
+                    app.state.comfy_video if audio_shares_video else \
+                    ComfyClient(settings.comfy_audio_url, http)
         app.state.image_jobs.backends = {"image": app.state.comfy, "video": app.state.comfy_video}
-        watcher = asyncio.create_task(app.state.image_jobs.watch())
+        app.state.audio_jobs.backend = app.state.comfy_audio
+        watchers = [asyncio.create_task(app.state.image_jobs.watch()),
+                    asyncio.create_task(app.state.audio_jobs.watch())]
         try:
             yield
         finally:
-            watcher.cancel()
-            with suppress(asyncio.CancelledError):
-                await watcher
+            for watcher in watchers:
+                watcher.cancel()
+            for watcher in watchers:
+                with suppress(asyncio.CancelledError):
+                    await watcher
+            await asyncio.gather(*app.state.audio_jobs.submissions, return_exceptions=True)
             if http is not None:
                 await http.aclose()
 
@@ -451,12 +471,18 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
         "image": image_queue_lock,
         "video": image_queue_lock if shared_backend else asyncio.Lock(),
     }
+    app.state.queue_locks["audio"] = image_queue_lock if audio_shares_image else \
+        app.state.queue_locks["video"] if audio_shares_video else asyncio.Lock()
     app.state.video_runtimes = {}
     app.state.video_started_at = {}
     app.state.comfy = comfy
     app.state.comfy_video = comfy_video
+    app.state.comfy_audio = comfy_audio or (comfy if audio_shares_image else
+                                          comfy_video if audio_shares_video else None)
     app.state.suno = suno
     app.state.image_jobs = ImageJobs(settings.image_job_dir, {"image": comfy, "video": comfy_video})
+    app.state.audio_jobs = AudioJobs(settings.image_job_dir, app.state.comfy_audio,
+                                     settings.comfy_audio_url)
     register_audio_routes(app, require_auth, auth_docs)
 
     @app.exception_handler(APIError)
@@ -487,6 +513,8 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             model_ids.extend([VIDEO_MODEL_ID, h3_graph.VIDEO_MODEL_ID])
         if settings.suno_url:
             model_ids.extend(AUDIO_MODELS)
+        if settings.comfy_audio_url:
+            model_ids.append(yue2_graph.MODEL_ID)
         data = [
             {"id": m, "object": "model", "created": created, "owned_by": "easel"}
             for m in model_ids
@@ -495,6 +523,9 @@ def create_app(settings: Settings | None = None, comfy=None, comfy_video=None, s
             music = next(entry for entry in data if entry["id"] == "suno-music")
             music.update(models_url=request_base_url(request) + "/v1/audio/models",
                          model_parameter="suno_model")
+        if settings.comfy_audio_url:
+            music = next(entry for entry in data if entry["id"] == yue2_graph.MODEL_ID)
+            music["capabilities_url"] = request_base_url(request) + "/v1/audio/capabilities?model=yue2"
         return {"object": "list", "data": data}
 
     @app.get("/v1/models/{model_id}/guide", dependencies=auth_docs,
